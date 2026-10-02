@@ -1,5 +1,5 @@
 #!/bin/bash
-
+## isso aqui é front, uma telinha só
 preset_jogo() {
     db_palavras=()
     tentativas=()
@@ -59,7 +59,7 @@ desenhar_header() {
     echo -e "${BOLD}Digite '!' para tentar a palavra toda.${RESET}"
     echo ""
 }
-
+## Aqui é contabilizar a tentavia.Recebe/Filtra/Contabiliza e Tem um Sṕlit aparte
 processar_tentativa() {
     local tentativa="$1"
     tentativa=$(sed 'y/áàãâéêíóôõúüçÁÀÃÂÉÊÍÓÔÕÚÜÇ/aaaaeeiooouucAAAAEEIOOOUUC/' <<< "$tentativa" | tr '[:upper:]' '[:lower:]' | tr -d '\r')
