@@ -150,26 +150,23 @@
     align: center top;
 }
 
-/* Linha minimalista e limpa: Letra: _ (Sem boxes) */
-#slot-letra-row {
-    height: auto;
-    width: 100%;
+/* Slot Focável com Underline: Letra: _ */
+LetterSlot {
+    height: 3;
+    width: auto;
+    min-width: 20;
     align: center middle;
     margin: 1 0;
+    padding: 0 2;
+    border: round $secondary;
+    background: $boost;
+    text-align: center;
 }
 
-#lbl-letra {
-    text-style: bold;
-    color: $accent;
-    margin-right: 1;
-}
-
-#slot-letra-candidata {
-    text-style: bold underline;
+LetterSlot:focus {
+    border: heavy $warning;
+    background: $panel;
     color: $warning;
-    background: transparent;
-    padding: 0;
-    margin: 0;
 }
 
 #status-mensagem {
@@ -219,4 +216,9 @@
 
 .action-btn {
     margin: 0 1;
+}
+
+.action-btn:focus {
+    border: heavy $warning;
+    background: $warning-muted;
 }
