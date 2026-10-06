@@ -1,4 +1,4 @@
-/* Estilos Exclusivos da Tela do Jogo da Forca */
+/* Estilos Exclusivos da Tela do Jogo da Forca - Layout Fluido e Redimensionável */
 
 #game-header {
     dock: top;
@@ -15,23 +15,28 @@
     height: 1fr;
     layout: grid;
     grid-size: 2 1;
-    grid-columns: 32 1fr;
+    grid-columns: 1fr 2fr;
     padding: 1;
+    overflow-y: auto;
 }
 
-/* Painel Esquerdo: Forca */
+/* Painel Esquerdo: Forca ASCII (1fr) */
 #forca-panel {
     background: $panel;
     border: round $primary;
     padding: 1;
     align: center middle;
     height: 100%;
+    width: 100%;
+    min-width: 20;
+    overflow-y: auto;
 }
 
 #forca-art {
     color: $warning;
     text-style: bold;
     text-align: center;
+    width: 100%;
 }
 
 #vidas-display {
@@ -39,16 +44,19 @@
     color: $error;
     text-style: bold;
     margin-top: 1;
+    width: 100%;
 }
 
-/* Painel Direito: Conteúdo e Jogo */
+/* Painel Direito: Conteúdo e Jogo (2fr) */
 #game-main-panel {
     background: $panel;
     border: round $accent;
     padding: 1 2;
     height: 100%;
+    width: 100%;
     layout: vertical;
     align: center top;
+    overflow-y: auto;
 }
 
 #badge-categoria {
@@ -75,7 +83,8 @@
     text-align: center;
     color: $warning;
     text-style: italic;
-    height: 2;
+    height: auto;
+    min-height: 2;
     margin-bottom: 1;
     width: 100%;
 }
@@ -104,10 +113,11 @@
     color: $error;
 }
 
-/* Teclado Virtual com Navegação por Setas */
+/* Teclado Virtual Fluido */
 #teclado-container {
     height: auto;
     width: 100%;
+    max-width: 62;
     align: center middle;
     margin-top: 1;
     padding: 1 0;
@@ -117,6 +127,7 @@
 
 .teclado-linha {
     height: auto;
+    width: 100%;
     align: center middle;
 }
 
@@ -129,7 +140,7 @@
     border: solid $secondary;
 }
 
-/* Tecla com foco / selecionada para reflexão antes do Enter */
+/* Tecla focada/selecionada */
 .key-btn:focus {
     border: heavy $warning;
     background: $warning;
@@ -165,6 +176,7 @@
 #game-actions {
     dock: bottom;
     height: 3;
+    width: 100%;
     background: $boost;
     align: center middle;
     padding: 0 1;

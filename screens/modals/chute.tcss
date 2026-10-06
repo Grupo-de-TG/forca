@@ -1,8 +1,12 @@
-/* Estilos do Modal de Chute All-In */
+/* Estilos do Modal de Chute All-In - Layout Fluido e Redimensionável */
 
 .modal-dialog {
-    width: 60;
+    width: 80%;
+    max-width: 62;
+    min-width: 36;
     height: auto;
+    max-height: 85%;
+    overflow-y: auto;
     background: $panel;
     border: thick $warning;
     padding: 1 2;
@@ -14,15 +18,18 @@
     text-style: bold;
     color: $warning;
     margin-bottom: 1;
+    width: 100%;
 }
 
 #chute-aviso {
     text-align: center;
     color: $text-muted;
     margin-bottom: 1;
+    width: 100%;
 }
 
 #chute-input {
+    width: 100%;
     margin: 1 0;
 }
 

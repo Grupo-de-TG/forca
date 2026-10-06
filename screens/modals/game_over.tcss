@@ -1,8 +1,12 @@
-/* Estilos do Modal de Fim de Jogo */
+/* Estilos do Modal de Fim de Jogo - Layout Fluido e Redimensionável */
 
 .modal-dialog {
-    width: 60;
+    width: 80%;
+    max-width: 62;
+    min-width: 36;
     height: auto;
+    max-height: 85%;
+    overflow-y: auto;
     background: $panel;
     border: thick $accent;
     padding: 1 2;
@@ -13,6 +17,7 @@
     text-align: center;
     text-style: bold;
     margin-bottom: 1;
+    width: 100%;
 }
 
 .modal-title.vitoria {
@@ -26,6 +31,7 @@
 .modal-palavra {
     text-align: center;
     margin-bottom: 1;
+    width: 100%;
 }
 
 #modal-stats {
@@ -33,6 +39,7 @@
     padding: 1;
     border: round $secondary;
     margin-bottom: 1;
+    width: 100%;
 }
 
 .modal-buttons {

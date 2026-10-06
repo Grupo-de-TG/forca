@@ -1,8 +1,12 @@
-/* Estilos Exclusivos da Tela de Menu */
+/* Estilos Exclusivos da Tela de Menu - Layout Fluido e Redimensionável */
 
 #menu-container {
-    width: 72;
+    width: 85%;
+    max-width: 74;
+    min-width: 38;
     height: auto;
+    max-height: 90%;
+    overflow-y: auto;
     border: heavy $accent;
     background: $panel;
     padding: 1 2;
@@ -14,12 +18,14 @@
     color: $accent;
     text-style: bold;
     margin-bottom: 1;
+    width: 100%;
 }
 
 #menu-subtitle {
     text-align: center;
     color: $text-muted;
     margin-bottom: 1;
+    width: 100%;
 }
 
 #menu-category-info {
@@ -29,6 +35,7 @@
     padding: 0 1;
     margin-bottom: 1;
     border: round $primary;
+    width: 100%;
 }
 
 #menu-buttons {
@@ -37,7 +44,9 @@
 }
 
 .menu-btn {
-    width: 46;
+    width: 80%;
+    max-width: 48;
+    min-width: 28;
     margin: 1 0;
 }
 
