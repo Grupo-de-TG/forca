@@ -1,0 +1,258 @@
+/* Estilos da TUI do Jogo da Forca */
+
+Screen {
+    background: $surface;
+    color: $text;
+    align: center middle;
+}
+
+/* ================= MENU PRINCIPAL ================= */
+#menu-container {
+    width: 70;
+    height: auto;
+    border: heavy $accent;
+    background: $panel;
+    padding: 1 2;
+    align: center middle;
+}
+
+#menu-title {
+    text-align: center;
+    color: $accent;
+    text-style: bold;
+    margin-bottom: 1;
+}
+
+#menu-subtitle {
+    text-align: center;
+    color: $text-muted;
+    margin-bottom: 1;
+}
+
+#menu-category-info {
+    text-align: center;
+    background: $boost;
+    color: $warning;
+    padding: 0 1;
+    margin-bottom: 1;
+    border: round $primary;
+}
+
+#menu-buttons {
+    width: 100%;
+    align: center middle;
+}
+
+.menu-btn {
+    width: 38;
+    margin: 1 0;
+}
+
+/* ================= SELEÇÃO DE CATEGORIAS ================= */
+#category-container {
+    width: 65;
+    height: 80%;
+    border: heavy $primary;
+    background: $panel;
+    padding: 1 2;
+}
+
+#category-list {
+    height: 1fr;
+    margin: 1 0;
+    border: solid $secondary;
+}
+
+/* ================= TELA DO JOGO ================= */
+#game-header {
+    dock: top;
+    height: 3;
+    background: $boost;
+    color: $accent;
+    align: center middle;
+    text-style: bold;
+    border-bottom: solid $primary;
+}
+
+#game-body {
+    width: 100%;
+    height: 1fr;
+    layout: grid;
+    grid-size: 2 1;
+    grid-columns: 32 1fr;
+    padding: 1;
+}
+
+/* Painel Esquerdo: Forca */
+#forca-panel {
+    background: $panel;
+    border: round $primary;
+    padding: 1;
+    align: center middle;
+    height: 100%;
+}
+
+#forca-art {
+    color: $warning;
+    text-style: bold;
+    text-align: center;
+}
+
+#vidas-display {
+    text-align: center;
+    color: $error;
+    text-style: bold;
+    margin-top: 1;
+}
+
+/* Painel Direito: Conteúdo e Jogo */
+#game-main-panel {
+    background: $panel;
+    border: round $accent;
+    padding: 1 2;
+    height: 100%;
+    layout: vertical;
+}
+
+#badge-categoria {
+    color: $accent;
+    text-style: bold;
+    background: $boost;
+    padding: 0 1;
+    width: auto;
+    margin-bottom: 1;
+}
+
+#palavra-secreta {
+    text-align: center;
+    text-style: bold;
+    color: $success;
+    background: $boost;
+    border: double $success;
+    padding: 1;
+    margin: 1 0;
+}
+
+#status-mensagem {
+    text-align: center;
+    color: $warning;
+    text-style: italic;
+    height: 2;
+    margin-bottom: 1;
+}
+
+#letras-historico {
+    height: auto;
+    layout: grid;
+    grid-size: 2 1;
+    grid-columns: 1fr 1fr;
+    background: $boost;
+    padding: 1;
+    border: solid $secondary;
+    margin-bottom: 1;
+}
+
+.letras-label {
+    text-style: bold;
+}
+
+#letras-certas-box {
+    color: $success;
+}
+
+#letras-erradas-box {
+    color: $error;
+}
+
+/* Teclado Virtual */
+#teclado-container {
+    height: auto;
+    align: center middle;
+    margin-top: 1;
+}
+
+.teclado-linha {
+    height: auto;
+    align: center middle;
+}
+
+.key-btn {
+    min-width: 4;
+    width: 4;
+    height: 3;
+    margin: 0 1;
+    padding: 0;
+}
+
+.key-btn.usada-certa {
+    background: $success;
+    color: $text;
+}
+
+.key-btn.usada-errada {
+    background: $error;
+    color: $text-muted;
+    opacity: 50%;
+}
+
+/* Barra de Ações Inferior */
+#game-actions {
+    dock: bottom;
+    height: 3;
+    background: $boost;
+    align: center middle;
+    padding: 0 1;
+}
+
+.action-btn {
+    margin: 0 1;
+}
+
+/* ================= MODAIS ================= */
+ModalScreen {
+    align: center middle;
+    background: rgba(0, 0, 0, 0.7);
+}
+
+.modal-dialog {
+    width: 55;
+    height: auto;
+    background: $panel;
+    border: thick $accent;
+    padding: 1 2;
+    align: center middle;
+}
+
+.modal-title {
+    text-align: center;
+    text-style: bold;
+    margin-bottom: 1;
+}
+
+.modal-title.vitoria {
+    color: $success;
+}
+
+.modal-title.derrota {
+    color: $error;
+}
+
+.modal-buttons {
+    width: 100%;
+    align: center middle;
+    margin-top: 1;
+}
+
+.modal-buttons Button {
+    margin: 0 1;
+}
+
+#chute-input {
+    margin: 1 0;
+}
+
+#about-text {
+    height: auto;
+    margin: 1 0;
+    color: $text;
+}
