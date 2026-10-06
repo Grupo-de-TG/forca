@@ -1,6 +1,7 @@
 """
 Tela Principal do Jogo da Forca.
-Suporta Layouts Dinâmicos Horizontal e Vertical orientados pelo aspect ratio da janela.
+100% Teclado Físico: Entrada com retorno visual da letra inserida e confirmação via Enter.
+Layouts Dinâmicos Horizontal e Vertical orientados pela proporção 40/60.
 """
 
 from __future__ import annotations
@@ -13,7 +14,7 @@ from textual.binding import Binding
 from textual.containers import Container, Horizontal, Vertical
 from textual.widgets import Button, Footer, Header, Label, Static
 
-from controllers.keyboard_grid_controller import KeyboardGridController
+from controllers.letter_buffer_controller import LetterBufferController
 from core.models import Categoria, GameState
 from core.orientation import OrientationDetector, OrientationType
 from interfaces.base_screen import BaseGameScreen
@@ -25,8 +26,7 @@ if TYPE_CHECKING:
 class GameScreen(BaseGameScreen):
     """
     Tela principal da partida da Forca.
-    Adapta automaticamente a disposição espacial entre Horizontal (lado a lado)
-    e Vertical (forca em cima, teclado embaixo) conforme a proporção da janela.
+    Entrada exclusiva via teclado físico com slot de retorno visual e confirmação no Enter.
     """
 
     CSS_PATH = Path(__file__).parent / "game.tcss"
@@ -43,36 +43,37 @@ class GameScreen(BaseGameScreen):
         super().__init__()
         self.categoria_inicial = categoria
         self.state: Optional[GameState] = None
-        self.controller = KeyboardGridController(initial_row=0, initial_col=0)
+        self.controller = LetterBufferController()
         self.current_orientation: OrientationType = OrientationType.HORIZONTAL
+
+    AUTO_FOCUS = None
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
         
         with Container(id="game-body"):
-            # Painel da Forca (Lado esquerdo no Horizontal, Topo no Vertical)
+            # Painel da Forca (40%: Esquerda no Horizontal, Topo no Vertical)
             with Container(id="forca-panel"):
                 yield Static(id="forca-art")
                 yield Label(id="vidas-display")
 
-            # Painel Principal (Lado direito no Horizontal, Base no Vertical)
+            # Painel Principal (60%: Direita no Horizontal, Base no Vertical)
             with Vertical(id="game-main-panel"):
                 with Horizontal():
                     yield Label(id="badge-categoria")
                 yield Static(id="palavra-secreta")
                 yield Label(id="status-mensagem")
 
-                # Histórico de Letras
+                # Retorno Visual da Letra Inserida (Buffer de Reflexão)
+                with Container(id="letra-candidata-box"):
+                    yield Label("Letra Escolhida:")
+                    yield Static("[ _ ]", id="slot-letra-candidata")
+                    yield Static("💡 Digite uma letra no teclado e tecle ENTER para confirmar", id="dica-confirmacao")
+
+                # Histórico de Letras Certas e Erradas
                 with Container(id="letras-historico"):
                     yield Label("Letras Certas: [green]-[/green]", id="letras-certas-box", classes="letras-label")
                     yield Label("Letras Erradas: [red]-[/red]", id="letras-erradas-box", classes="letras-label")
-
-                # Teclado Virtual Interativo
-                with Vertical(id="teclado-container"):
-                    for linha in self.controller.GRID[:3]:
-                        with Horizontal(classes="teclado-linha"):
-                            for letra in linha:
-                                yield Button(letra.upper(), id=f"key-{letra}", classes="key-btn")
 
         with Horizontal(id="game-actions"):
             yield Button("🎯 Chutar Palavra [Ctrl+F]", id="btn-chutar", variant="warning", classes="action-btn")
@@ -85,13 +86,16 @@ class GameScreen(BaseGameScreen):
         self.ajustar_orientacao(self.size.width, self.size.height)
         app: ForcaApp = self.app  # type: ignore
         self.iniciar_nova_partida(self.categoria_inicial or app.selected_category)
-        self.focar_elemento_atual()
+        try:
+            self.query_one("#letra-candidata-box").focus()
+        except Exception:
+            pass
 
     def on_resize(self, event: events.Resize) -> None:
         self.ajustar_orientacao(event.size.width, event.size.height)
 
     def ajustar_orientacao(self, width: int, height: int) -> None:
-        """Aplica dinamicamente as classes de layout horizontal ou vertical."""
+        """Aplica dinamicamente a proporção 40/60 no layout horizontal ou vertical."""
         orientacao = OrientationDetector.detect(width, height)
         self.current_orientation = orientacao
 
@@ -103,13 +107,12 @@ class GameScreen(BaseGameScreen):
             self.add_class("layout-horizontal")
 
     def iniciar_nova_partida(self, categoria: Optional[Categoria] = None) -> None:
-        """Inicializa nova rodada e reseta o controlador e teclado."""
+        """Inicializa nova rodada e reseta o controlador e buffers."""
         app: ForcaApp = self.app  # type: ignore
         self.state = app.engine.novo_jogo(categoria)
-        self.atualizar_ui()
-        self.resetar_teclado()
         self.controller.reset()
-        self.focar_elemento_atual()
+        self.atualizar_ui()
+        self.atualizar_slot_letra()
 
     def atualizar_ui(self) -> None:
         """Sincroniza os widgets visuais com o estado do jogo."""
@@ -139,37 +142,21 @@ class GameScreen(BaseGameScreen):
         self.query_one("#letras-certas-box", Label).update(f"Certas: [green]{certas_str}[/green]")
         self.query_one("#letras-erradas-box", Label).update(f"Erradas: [red]{erradas_str}[/red]")
 
-    def resetar_teclado(self) -> None:
-        for btn in self.query(".key-btn"):
-            btn.remove_class("usada-certa")
-            btn.remove_class("usada-errada")
-
-    def registrar_letra_no_teclado(self, letra: str, feedback: str) -> None:
-        try:
-            btn = self.query_one(f"#key-{letra.lower()}", Button)
-            if feedback == "acerto":
-                btn.add_class("usada-certa")
-            elif feedback == "erro":
-                btn.add_class("usada-errada")
-        except Exception:
-            pass
-
-    def focar_elemento_atual(self) -> None:
-        target_id = self.controller.get_current_target_id()
-        try:
-            self.query_one(f"#{target_id}", Button).focus()
-        except Exception:
-            pass
+    def atualizar_slot_letra(self) -> None:
+        """Atualiza o retorno visual da letra digitada antes de confirmar."""
+        candidata = self.controller.get_candidate()
+        if candidata:
+            self.query_one("#slot-letra-candidata", Static).update(f"[b][  {candidata}  ][/b]")
+            self.query_one("#dica-confirmacao", Static).update(
+                f"👉 Pressione [b]ENTER[/b] para tentar a letra '{candidata}' ou digite outra"
+            )
+        else:
+            self.query_one("#slot-letra-candidata", Static).update("[  _  ]")
+            self.query_one("#dica-confirmacao", Static).update(
+                "💡 Digite uma letra no teclado e tecle [b]ENTER[/b] para confirmar"
+            )
 
     # ===== Implementação de BaseGameScreen =====
-    def on_navigation_up(self) -> None:
-        target_id = self.controller.move_up()
-        self.query_one(f"#{target_id}", Button).focus()
-
-    def on_navigation_down(self) -> None:
-        target_id = self.controller.move_down()
-        self.query_one(f"#{target_id}", Button).focus()
-
     def on_navigation_left(self) -> None:
         target_id = self.controller.move_left()
         self.query_one(f"#{target_id}", Button).focus()
@@ -178,61 +165,57 @@ class GameScreen(BaseGameScreen):
         target_id = self.controller.move_right()
         self.query_one(f"#{target_id}", Button).focus()
 
+    def on_navigation_up(self) -> None:
+        self.on_navigation_left()
+
+    def on_navigation_down(self) -> None:
+        self.on_navigation_right()
+
     def on_action_confirm(self) -> None:
+        """Processa exclusivamente a letra candidata quando o usuário teclar Enter."""
         if not self.state or self.state.fim_de_jogo:
             return
 
         app: ForcaApp = self.app  # type: ignore
 
-        if not self.controller.is_action_button():
-            letra = self.controller.get_current_letter()
+        if self.controller.has_candidate():
+            letra = self.controller.get_candidate()
             if letra:
                 self.state, feedback = app.engine.processar_tentativa(self.state, letra)
-                self.registrar_letra_no_teclado(letra, feedback)
+                self.controller.clear_candidate()
                 self.atualizar_ui()
+                self.atualizar_slot_letra()
 
                 if self.state.fim_de_jogo:
                     self.exibir_modal_fim_de_jogo()
         else:
-            target_id = self.controller.get_current_target_id()
-            if target_id == "btn-chutar":
-                self.action_chutar_tudo()
-            elif target_id == "btn-nova-palavra":
-                self.action_reiniciar()
-            elif target_id == "btn-voltar-menu":
-                self.action_menu_principal()
+            self.query_one("#status-mensagem", Label).update("⚠️ Digite uma letra no teclado antes de teclar ENTER.")
 
     def on_key(self, event: events.Key) -> None:
-        if event.key == "left":
+        # Navegação entre botões de ação
+        if event.key in ("left", "up"):
             self.on_navigation_left()
             event.prevent_default()
             return
-        elif event.key == "right":
+        elif event.key in ("right", "down"):
             self.on_navigation_right()
-            event.prevent_default()
-            return
-        elif event.key == "up":
-            self.on_navigation_up()
-            event.prevent_default()
-            return
-        elif event.key == "down":
-            self.on_navigation_down()
             event.prevent_default()
             return
         elif event.key == "enter":
             self.on_action_confirm()
             event.prevent_default()
             return
+        elif event.key in ("backspace", "delete"):
+            self.controller.clear_candidate()
+            self.atualizar_slot_letra()
+            event.prevent_default()
+            return
 
-        # Digitação direta no teclado físico (A-Z) move o foco/cursor para a letra
-        if event.character and event.character.isalpha():
-            target_id = self.controller.jump_to_letter(event.character)
-            if target_id:
-                self.query_one(f"#{target_id}", Button).focus()
-                self.query_one("#status-mensagem", Label).update(
-                    f"Letra [b]{event.character.upper()}[/b] selecionada. Pressione [b]ENTER[/b] para confirmar."
-                )
-                event.prevent_default()
+        # Digitação direta no teclado físico (A-Z ou ç) atualiza o retorno visual da letra
+        if event.character and (event.character.isalpha() or event.character == "ç"):
+            self.controller.set_candidate(event.character)
+            self.atualizar_slot_letra()
+            event.prevent_default()
 
     def action_chutar_tudo(self) -> None:
         if not self.state or self.state.fim_de_jogo:
@@ -244,9 +227,8 @@ class GameScreen(BaseGameScreen):
             if chute:
                 self.state, acertou = app.engine.processar_chute(self.state, chute)
                 self.atualizar_ui()
+                self.atualizar_slot_letra()
                 self.exibir_modal_fim_de_jogo()
-            else:
-                self.focar_elemento_atual()
 
         self.app.push_screen(ChuteModal(), callback_chute)
 
@@ -277,12 +259,7 @@ class GameScreen(BaseGameScreen):
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         btn_id = event.button.id or ""
-        if btn_id.startswith("key-"):
-            letra = btn_id.replace("key-", "")
-            target_id = self.controller.jump_to_letter(letra)
-            if target_id:
-                self.query_one(f"#{target_id}", Button).focus()
-        elif btn_id == "btn-chutar":
+        if btn_id == "btn-chutar":
             self.action_chutar_tudo()
         elif btn_id == "btn-nova-palavra":
             self.action_reiniciar()

@@ -115,9 +115,6 @@ class MenuScreen(BaseGameScreen):
         elif event.key in ("down", "right"):
             self.on_navigation_down()
             event.prevent_default()
-        elif event.key == "enter":
-            self.on_action_confirm()
-            event.prevent_default()
 
     def action_jogar(self) -> None:
         from screens.game.screen import GameScreen
