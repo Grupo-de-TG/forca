@@ -1,6 +1,6 @@
 """
 Tela Principal do Jogo da Forca.
-100% Teclado Físico: Entrada com retorno visual da letra inserida e confirmação via Enter.
+100% Teclado Físico: Entrada com retorno visual minimalista (underline) e legenda curta.
 Layouts Dinâmicos Horizontal e Vertical orientados pela proporção 40/60.
 """
 
@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 class GameScreen(BaseGameScreen):
     """
     Tela principal da partida da Forca.
-    Entrada exclusiva via teclado físico com slot de retorno visual e confirmação no Enter.
+    Entrada minimalista via teclado físico com slot de underline e legenda curta.
     """
 
     CSS_PATH = Path(__file__).parent / "game.tcss"
@@ -64,11 +64,11 @@ class GameScreen(BaseGameScreen):
                 yield Static(id="palavra-secreta")
                 yield Label(id="status-mensagem")
 
-                # Retorno Visual da Letra Inserida (Buffer de Reflexão)
-                with Container(id="letra-candidata-box"):
-                    yield Label("Letra Escolhida:")
-                    yield Static("[ _ ]", id="slot-letra-candidata")
-                    yield Static("💡 Digite uma letra no teclado e tecle ENTER para confirmar", id="dica-confirmacao")
+                # Retorno Visual Minimalista da Letra com Underline
+                with Horizontal(id="slot-letra-row"):
+                    yield Label("Letra: ", id="lbl-letra")
+                    yield Static("_", id="slot-letra-candidata")
+                    yield Label("[Enter: Enviar | Backspace: Apagar]", id="legenda-curta")
 
                 # Histórico de Letras Certas e Erradas
                 with Container(id="letras-historico"):
@@ -86,10 +86,6 @@ class GameScreen(BaseGameScreen):
         self.ajustar_orientacao(self.size.width, self.size.height)
         app: ForcaApp = self.app  # type: ignore
         self.iniciar_nova_partida(self.categoria_inicial or app.selected_category)
-        try:
-            self.query_one("#letra-candidata-box").focus()
-        except Exception:
-            pass
 
     def on_resize(self, event: events.Resize) -> None:
         self.ajustar_orientacao(event.size.width, event.size.height)
@@ -143,18 +139,12 @@ class GameScreen(BaseGameScreen):
         self.query_one("#letras-erradas-box", Label).update(f"Erradas: [red]{erradas_str}[/red]")
 
     def atualizar_slot_letra(self) -> None:
-        """Atualiza o retorno visual da letra digitada antes de confirmar."""
+        """Atualiza o slot com a letra inserida ou underline."""
         candidata = self.controller.get_candidate()
         if candidata:
-            self.query_one("#slot-letra-candidata", Static).update(f"[b][  {candidata}  ][/b]")
-            self.query_one("#dica-confirmacao", Static).update(
-                f"👉 Pressione [b]ENTER[/b] para tentar a letra '{candidata}' ou digite outra"
-            )
+            self.query_one("#slot-letra-candidata", Static).update(f"[b][u]{candidata}[/u][/b]")
         else:
-            self.query_one("#slot-letra-candidata", Static).update("[  _  ]")
-            self.query_one("#dica-confirmacao", Static).update(
-                "💡 Digite uma letra no teclado e tecle [b]ENTER[/b] para confirmar"
-            )
+            self.query_one("#slot-letra-candidata", Static).update("_")
 
     # ===== Implementação de BaseGameScreen =====
     def on_navigation_left(self) -> None:
