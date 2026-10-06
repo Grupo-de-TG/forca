@@ -18,7 +18,7 @@
     height: 1fr;
     layout: grid;
     grid-size: 2 1;
-    grid-columns: 4fr 6fr; /* 40% esquerda (View Forca), 60% direita (Jogo/Entrada) */
+    grid-columns: 4fr 6fr; /* 40% esquerda (View Forca), 60% direita (Tema + Palavra + Entrada) */
     padding: 1;
     overflow-y: auto;
 }
@@ -67,7 +67,7 @@
     height: 1fr;
     layout: grid;
     grid-size: 1 2;
-    grid-rows: 4fr 6fr; /* 40% topo (View Forca), 60% base (Jogo/Entrada) */
+    grid-rows: 4fr 6fr; /* 40% topo (View Forca), 60% base (Tema + Palavra + Entrada) */
     padding: 0 1;
     overflow-y: auto;
 }
@@ -110,14 +110,23 @@
 }
 
 /* ========================================================= */
-/* ELEMENTOS DO JOGO E FEEDBACK VISUAL                       */
+/* CAIXA DE TEMA + PALAVRA (ENTRE A VIEW E O INSERT DE LETRAS)*/
 /* ========================================================= */
-#badge-categoria {
-    color: $accent;
-    text-style: bold;
+#tema-palavra-container {
+    height: auto;
+    width: 100%;
     background: $boost;
-    padding: 0 1;
-    width: auto;
+    border: round $primary;
+    padding: 1;
+    margin-bottom: 1;
+    align: center middle;
+}
+
+#badge-categoria {
+    color: $warning;
+    text-style: bold;
+    text-align: center;
+    width: 100%;
     margin-bottom: 1;
 }
 
@@ -125,24 +134,22 @@
     text-align: center;
     text-style: bold;
     color: $success;
-    background: $boost;
+    background: $panel;
     border: double $success;
     padding: 1;
-    margin: 1 0;
     width: 100%;
 }
 
-#status-mensagem {
-    text-align: center;
-    color: $warning;
-    text-style: italic;
+/* ========================================================= */
+/* PARTE DE INSERT DE LETRAS, STATUS E HISTÓRICO             */
+/* ========================================================= */
+#insert-letras-panel {
     height: auto;
-    min-height: 2;
-    margin-bottom: 1;
     width: 100%;
+    layout: vertical;
+    align: center top;
 }
 
-/* Retorno Visual Minimalista da Letra Inserida com Underline */
 #slot-letra-row {
     height: auto;
     width: 100%;
@@ -170,6 +177,16 @@
 #legenda-curta {
     color: $text-muted;
     margin-left: 2;
+}
+
+#status-mensagem {
+    text-align: center;
+    color: $warning;
+    text-style: italic;
+    height: auto;
+    min-height: 2;
+    margin-bottom: 1;
+    width: 100%;
 }
 
 /* Histórico de Letras */

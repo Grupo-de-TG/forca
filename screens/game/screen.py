@@ -1,6 +1,6 @@
 """
 Tela Principal do Jogo da Forca.
-100% Teclado Físico: Entrada com retorno visual minimalista (underline) e legenda curta.
+100% Teclado Físico: Caixa com Tema + Palavra posicionada entre a View e a entrada de letras.
 Layouts Dinâmicos Horizontal e Vertical orientados pela proporção 40/60.
 """
 
@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 class GameScreen(BaseGameScreen):
     """
     Tela principal da partida da Forca.
-    Entrada minimalista via teclado físico com slot de underline e legenda curta.
+    Tema e Palavra Secreta unificados em um box entre a View e o painel de inserção de letras.
     """
 
     CSS_PATH = Path(__file__).parent / "game.tcss"
@@ -52,28 +52,31 @@ class GameScreen(BaseGameScreen):
         yield Header(show_clock=True)
         
         with Container(id="game-body"):
-            # Painel da Forca (40%: Esquerda no Horizontal, Topo no Vertical)
+            # 1. Painel da Forca (View da Forca: 40%)
             with Container(id="forca-panel"):
                 yield Static(id="forca-art")
                 yield Label(id="vidas-display")
 
-            # Painel Principal (60%: Direita no Horizontal, Base no Vertical)
+            # 2. Painel Principal (60%)
             with Vertical(id="game-main-panel"):
-                with Horizontal():
+                # Caixa integrada de Tema + Palavra (entre a View e o Insert)
+                with Vertical(id="tema-palavra-container"):
                     yield Label(id="badge-categoria")
-                yield Static(id="palavra-secreta")
-                yield Label(id="status-mensagem")
+                    yield Static(id="palavra-secreta")
 
-                # Retorno Visual Minimalista da Letra com Underline
-                with Horizontal(id="slot-letra-row"):
-                    yield Label("Letra: ", id="lbl-letra")
-                    yield Static("_", id="slot-letra-candidata")
-                    yield Label("[Enter: Enviar | Backspace: Apagar]", id="legenda-curta")
+                # Painel de Inserção de Letras, Status e Histórico
+                with Vertical(id="insert-letras-panel"):
+                    with Horizontal(id="slot-letra-row"):
+                        yield Label("Letra: ", id="lbl-letra")
+                        yield Static("_", id="slot-letra-candidata")
+                        yield Label("[Enter: Enviar | Backspace: Apagar]", id="legenda-curta")
 
-                # Histórico de Letras Certas e Erradas
-                with Container(id="letras-historico"):
-                    yield Label("Letras Certas: [green]-[/green]", id="letras-certas-box", classes="letras-label")
-                    yield Label("Letras Erradas: [red]-[/red]", id="letras-erradas-box", classes="letras-label")
+                    yield Label(id="status-mensagem")
+
+                    # Histórico de Letras Certas e Erradas
+                    with Container(id="letras-historico"):
+                        yield Label("Letras Certas: [green]-[/green]", id="letras-certas-box", classes="letras-label")
+                        yield Label("Letras Erradas: [red]-[/red]", id="letras-erradas-box", classes="letras-label")
 
         with Horizontal(id="game-actions"):
             yield Button("🎯 Chutar Palavra [Ctrl+F]", id="btn-chutar", variant="warning", classes="action-btn")
@@ -126,7 +129,7 @@ class GameScreen(BaseGameScreen):
         )
 
         # 2. Categoria e Palavra Secreta
-        self.query_one("#badge-categoria", Label).update(f"📂 Tema: {self.state.categoria_nome}")
+        self.query_one("#badge-categoria", Label).update(f"Tema: {self.state.categoria_nome}")
         self.query_one("#palavra-secreta", Static).update(self.state.progresso_exibicao)
 
         # 3. Status
@@ -224,14 +227,11 @@ class GameScreen(BaseGameScreen):
 
     def exibir_modal_fim_de_jogo(self) -> None:
         from screens.modals.game_over_modal import GameOverModal
-        from screens.categories.screen import CategoryScreen
         app: ForcaApp = self.app  # type: ignore
 
         def callback_fim(acao: str) -> None:
             if acao == "replay":
                 self.iniciar_nova_partida(app.selected_category)
-            elif acao == "categories":
-                self.app.push_screen(CategoryScreen())
             elif acao == "menu":
                 self.app.pop_screen()
 

@@ -29,7 +29,7 @@ class GameOverModal(BaseGameModal[str]):
         Binding("ctrl+r", "replay", "Jogar Novamente"),
     ]
 
-    MODAL_BUTTONS = ["btn-replay", "btn-cat", "btn-menu"]
+    MODAL_BUTTONS = ["btn-replay", "btn-menu"]
 
     def __init__(self, state: GameState):
         super().__init__()
@@ -38,15 +38,15 @@ class GameOverModal(BaseGameModal[str]):
 
     def compose(self) -> ComposeResult:
         venceu = self.game_state.venceu
-        titulo = "🎉 VITÓRIA ESPETACULAR! 🎉" if venceu else "💀 FIM DE JOGO! ENFORCADO 💀"
+        titulo = "VITÓRIA!" if venceu else "FIM DE JOGO! ENFORCADO"
         classe_titulo = "vitoria" if venceu else "derrota"
 
         with Container(classes="modal-dialog"):
             yield Label(titulo, classes=f"modal-title {classe_titulo}")
-            yield Static(f"A palavra secreta era: [b]{self.game_state.palavra_original.upper()}[/b]\n", classes="modal-palavra")
+            yield Static(f"Palavra: [b]{self.game_state.palavra_original.upper()}[/b]\n", classes="modal-palavra")
             
             stats_text = (
-                f"• Categoria: [yellow]{self.game_state.categoria_nome}[/yellow]\n"
+                f"• Tema: [yellow]{self.game_state.categoria_nome}[/yellow]\n"
                 f"• Letras Certas: [green]{len(self.game_state.letras_certas)}[/green]\n"
                 f"• Letras Erradas: [red]{len(self.game_state.letras_erradas)}[/red]\n"
                 f"• Vidas Restantes: [cyan]{self.game_state.tentativas_restantes}/6[/cyan]"
@@ -55,8 +55,7 @@ class GameOverModal(BaseGameModal[str]):
 
             with Horizontal(classes="modal-buttons"):
                 yield Button("Jogar Novamente [Enter]", id="btn-replay", variant="success")
-                yield Button("Trocar Categoria", id="btn-cat", variant="primary")
-                yield Button("Menu Principal", id="btn-menu", variant="default")
+                yield Button("Menu Principal [Ctrl+M]", id="btn-menu", variant="default")
 
     def on_mount(self) -> None:
         self.focar_elemento_atual()
@@ -87,16 +86,11 @@ class GameOverModal(BaseGameModal[str]):
         target_id = self.controller.get_current_target_id()
         if target_id == "btn-replay":
             self.action_replay()
-        elif target_id == "btn-cat":
-            self.action_categories()
         elif target_id == "btn-menu":
             self.action_menu()
 
     def action_replay(self) -> None:
         self.dismiss("replay")
-
-    def action_categories(self) -> None:
-        self.dismiss("categories")
 
     def action_menu(self) -> None:
         self.dismiss("menu")
@@ -104,8 +98,6 @@ class GameOverModal(BaseGameModal[str]):
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "btn-replay":
             self.action_replay()
-        elif event.button.id == "btn-cat":
-            self.action_categories()
         elif event.button.id == "btn-menu":
             self.action_menu()
 
