@@ -6,20 +6,21 @@ Screen {
     align: center middle;
 }
 
-/* Foco visível e claro para navegação por setas e Tab */
+/* Foco visível com alto contraste para navegação por setas (Sem Mouse) */
 Button:focus {
-    border: heavy $accent;
-    background: $accent-muted;
+    border: heavy $warning;
+    background: $warning-muted;
     text-style: bold;
+    color: $text;
+}
+
+OptionList:focus {
+    border: heavy $accent;
 }
 
 Input:focus {
     border: heavy $warning;
     background: $boost;
-}
-
-OptionList:focus {
-    border: heavy $accent;
 }
 
 /* ================= MENU PRINCIPAL ================= */
@@ -60,8 +61,13 @@ OptionList:focus {
 }
 
 .menu-btn {
-    width: 44;
+    width: 46;
     margin: 1 0;
+}
+
+.menu-btn:focus {
+    border: heavy $accent;
+    background: $accent-muted;
 }
 
 /* ================= SELEÇÃO DE CATEGORIAS ================= */
@@ -128,6 +134,7 @@ OptionList:focus {
     padding: 1 2;
     height: 100%;
     layout: vertical;
+    align: center top;
 }
 
 #badge-categoria {
@@ -147,6 +154,7 @@ OptionList:focus {
     border: double $success;
     padding: 1;
     margin: 1 0;
+    width: 100%;
 }
 
 #status-mensagem {
@@ -155,10 +163,12 @@ OptionList:focus {
     text-style: italic;
     height: 2;
     margin-bottom: 1;
+    width: 100%;
 }
 
 #letras-historico {
     height: auto;
+    width: 100%;
     layout: grid;
     grid-size: 2 1;
     grid-columns: 1fr 1fr;
@@ -180,46 +190,15 @@ OptionList:focus {
     color: $error;
 }
 
-/* Controle de Entrada de Letras (Buffer + Confirmação) */
-#input-controller-box {
-    height: auto;
-    background: $boost;
-    border: round $primary;
-    padding: 1;
-    margin-top: 1;
-    align: center middle;
-}
-
-#input-letra-row {
-    height: auto;
-    align: center middle;
-    width: 100%;
-}
-
-#letra-input {
-    width: 8;
-    height: 3;
-    text-align: center;
-    text-style: bold;
-    border: solid $accent;
-}
-
-#btn-enviar-letra {
-    margin-left: 2;
-    min-width: 22;
-}
-
-#input-dica {
-    text-align: center;
-    color: $text-muted;
-    margin-top: 1;
-}
-
-/* Teclado Virtual */
+/* Teclado Virtual com Navegação por Setas */
 #teclado-container {
     height: auto;
+    width: 100%;
     align: center middle;
     margin-top: 1;
+    padding: 1 0;
+    background: $boost;
+    border: round $primary;
 }
 
 .teclado-linha {
@@ -229,21 +208,43 @@ OptionList:focus {
 
 .key-btn {
     min-width: 4;
-    width: 4;
+    width: 5;
     height: 3;
     margin: 0 1;
     padding: 0;
+    border: solid $secondary;
+}
+
+/* Tecla com foco / selecionada para pensar */
+.key-btn:focus {
+    border: heavy $warning;
+    background: $warning;
+    color: #000000;
+    text-style: bold;
 }
 
 .key-btn.usada-certa {
     background: $success;
-    color: $text;
+    color: #ffffff;
+    border: solid $success-lighten-2;
+}
+
+.key-btn.usada-certa:focus {
+    border: heavy $warning;
+    background: $success-darken-1;
+    color: $warning;
 }
 
 .key-btn.usada-errada {
-    background: $error;
+    background: $error-darken-2;
     color: $text-muted;
-    opacity: 50%;
+    opacity: 60%;
+    border: solid $error;
+}
+
+.key-btn.usada-errada:focus {
+    border: heavy $warning;
+    opacity: 90%;
 }
 
 /* Barra de Ações Inferior */
