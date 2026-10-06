@@ -1,71 +1,18 @@
 """
-Mecanismo central do Jogo da Forca (Game Engine).
-Lida com leitura dos arquivos em listas/, normalização de caracteres e regras do jogo.
+Mecanismo central de regras de negócio do Jogo da Forca.
 """
 
 from __future__ import annotations
-import glob
-import os
 import random
-import unicodedata
-from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-
-def normalizar_texto(texto: str) -> str:
-    """Remove acentos, caracteres especiais e converte para minúsculas."""
-    nfkd = unicodedata.normalize("NFKD", texto)
-    sem_acento = "".join([c for c in nfkd if not unicodedata.combining(c)])
-    return sem_acento.lower().strip()
-
-
-@dataclass
-class Categoria:
-    nome: str
-    arquivo_path: Path
-    total_palavras: int = 0
-
-
-@dataclass
-class GameState:
-    categoria_nome: str
-    palavra_original: str
-    palavra_normalizada: str
-    tentativas_restantes: int = 6
-    letras_certas: List[str] = field(default_factory=list)
-    letras_erradas: List[str] = field(default_factory=list)
-    mensagem: str = "Bora começar! Digite uma letra ou clique no teclado."
-    venceu: bool = False
-    fim_de_jogo: bool = False
-    chute_usado: bool = False
-
-    @property
-    def erros(self) -> int:
-        return 6 - self.tentativas_restantes
-
-    @property
-    def progresso_exibicao(self) -> str:
-        """Gera a string visual com letras acertadas e traços."""
-        res = []
-        for char in self.palavra_normalizada:
-            if char == " ":
-                res.append(" ")
-            elif char == "-":
-                res.append("-")
-            elif char in self.letras_certas:
-                res.append(char.upper())
-            else:
-                res.append("_")
-        return " ".join(res)
-
-    @property
-    def todas_tentativas(self) -> List[str]:
-        return self.letras_certas + self.letras_erradas
+from core.models import Categoria, GameState
+from core.normalizer import normalizar_texto
 
 
 class ForcaEngine:
-    """Gerencia listas de palavras e o estado das rodadas."""
+    """Gerencia listas de palavras, sorteios e o fluxo de regras das rodadas."""
 
     FORCA_ARTES = [
         # 0 erros
@@ -142,7 +89,7 @@ class ForcaEngine:
 
     def __init__(self, base_dir: Optional[Path] = None):
         if base_dir is None:
-            base_dir = Path(__file__).parent
+            base_dir = Path(__file__).parent.parent
         self.listas_dir = base_dir / "listas"
         self.categorias: List[Categoria] = []
         self.carregar_categorias()
@@ -165,7 +112,6 @@ class ForcaEngine:
     def sortear_palavra(self, categoria: Optional[Categoria] = None) -> Tuple[str, str, str]:
         """Retorna (categoria_nome, palavra_original, palavra_normalizada)."""
         if not self.categorias:
-            # Fallback caso não encontre listas
             return ("Geral", "computador", "computador")
 
         cat_escolhida = categoria if categoria else random.choice(self.categorias)
@@ -189,7 +135,7 @@ class ForcaEngine:
             tentativas_restantes=6,
             letras_certas=[],
             letras_erradas=[],
-            mensagem="Bora começar! Digite uma letra ou clique no teclado.",
+            mensagem="Bora começar! Navegue com as setas ou digite uma letra e tecle Enter.",
         )
 
     def processar_tentativa(self, state: GameState, tentativa: str) -> Tuple[GameState, str]:
@@ -236,9 +182,7 @@ class ForcaEngine:
         return state, feedback
 
     def processar_chute(self, state: GameState, chute: str) -> Tuple[GameState, bool]:
-        """
-        Processa um chute da palavra completa (All-in).
-        """
+        """Processa um chute da palavra completa (All-in)."""
         if state.fim_de_jogo:
             return state, False
 
@@ -248,7 +192,6 @@ class ForcaEngine:
 
         if chute_norm == state.palavra_normalizada:
             state.venceu = True
-            # Revela todas as letras
             for c in state.palavra_normalizada:
                 if c.isalpha() and c not in state.letras_certas:
                     state.letras_certas.append(c)

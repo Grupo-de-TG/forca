@@ -1,0 +1,25 @@
+/* Estilos Exclusivos da Tela de Seleção de Categorias */
+
+#category-container {
+    width: 68;
+    height: 85%;
+    border: heavy $primary;
+    background: $panel;
+    padding: 1 2;
+}
+
+#category-list {
+    height: 1fr;
+    margin: 1 0;
+    border: solid $secondary;
+}
+
+.modal-buttons {
+    width: 100%;
+    align: center middle;
+    margin-top: 1;
+}
+
+.modal-buttons Button {
+    margin: 0 1;
+}

@@ -1,91 +1,5 @@
-/* Estilos da TUI do Jogo da Forca - SysOps Edition */
+/* Estilos Exclusivos da Tela do Jogo da Forca */
 
-Screen {
-    background: $surface;
-    color: $text;
-    align: center middle;
-}
-
-/* Foco visível com alto contraste para navegação por setas (Sem Mouse) */
-Button:focus {
-    border: heavy $warning;
-    background: $warning-muted;
-    text-style: bold;
-    color: $text;
-}
-
-OptionList:focus {
-    border: heavy $accent;
-}
-
-Input:focus {
-    border: heavy $warning;
-    background: $boost;
-}
-
-/* ================= MENU PRINCIPAL ================= */
-#menu-container {
-    width: 72;
-    height: auto;
-    border: heavy $accent;
-    background: $panel;
-    padding: 1 2;
-    align: center middle;
-}
-
-#menu-title {
-    text-align: center;
-    color: $accent;
-    text-style: bold;
-    margin-bottom: 1;
-}
-
-#menu-subtitle {
-    text-align: center;
-    color: $text-muted;
-    margin-bottom: 1;
-}
-
-#menu-category-info {
-    text-align: center;
-    background: $boost;
-    color: $warning;
-    padding: 0 1;
-    margin-bottom: 1;
-    border: round $primary;
-}
-
-#menu-buttons {
-    width: 100%;
-    align: center middle;
-}
-
-.menu-btn {
-    width: 46;
-    margin: 1 0;
-}
-
-.menu-btn:focus {
-    border: heavy $accent;
-    background: $accent-muted;
-}
-
-/* ================= SELEÇÃO DE CATEGORIAS ================= */
-#category-container {
-    width: 68;
-    height: 85%;
-    border: heavy $primary;
-    background: $panel;
-    padding: 1 2;
-}
-
-#category-list {
-    height: 1fr;
-    margin: 1 0;
-    border: solid $secondary;
-}
-
-/* ================= TELA DO JOGO ================= */
 #game-header {
     dock: top;
     height: 3;
@@ -215,7 +129,7 @@ Input:focus {
     border: solid $secondary;
 }
 
-/* Tecla com foco / selecionada para pensar */
+/* Tecla com foco / selecionada para reflexão antes do Enter */
 .key-btn:focus {
     border: heavy $warning;
     background: $warning;
@@ -258,53 +172,4 @@ Input:focus {
 
 .action-btn {
     margin: 0 1;
-}
-
-/* ================= MODAIS ================= */
-ModalScreen {
-    align: center middle;
-    background: rgba(0, 0, 0, 0.7);
-}
-
-.modal-dialog {
-    width: 60;
-    height: auto;
-    background: $panel;
-    border: thick $accent;
-    padding: 1 2;
-    align: center middle;
-}
-
-.modal-title {
-    text-align: center;
-    text-style: bold;
-    margin-bottom: 1;
-}
-
-.modal-title.vitoria {
-    color: $success;
-}
-
-.modal-title.derrota {
-    color: $error;
-}
-
-.modal-buttons {
-    width: 100%;
-    align: center middle;
-    margin-top: 1;
-}
-
-.modal-buttons Button {
-    margin: 0 1;
-}
-
-#chute-input {
-    margin: 1 0;
-}
-
-#about-text {
-    height: auto;
-    margin: 1 0;
-    color: $text;
 }

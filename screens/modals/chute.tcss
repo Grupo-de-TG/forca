@@ -1,0 +1,37 @@
+/* Estilos do Modal de Chute All-In */
+
+.modal-dialog {
+    width: 60;
+    height: auto;
+    background: $panel;
+    border: thick $warning;
+    padding: 1 2;
+    align: center middle;
+}
+
+.modal-title {
+    text-align: center;
+    text-style: bold;
+    color: $warning;
+    margin-bottom: 1;
+}
+
+#chute-aviso {
+    text-align: center;
+    color: $text-muted;
+    margin-bottom: 1;
+}
+
+#chute-input {
+    margin: 1 0;
+}
+
+.modal-buttons {
+    width: 100%;
+    align: center middle;
+    margin-top: 1;
+}
+
+.modal-buttons Button {
+    margin: 0 1;
+}

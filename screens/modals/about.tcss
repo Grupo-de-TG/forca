@@ -1,0 +1,33 @@
+/* Estilos do Modal Sobre & Controles */
+
+.modal-dialog {
+    width: 62;
+    height: auto;
+    background: $panel;
+    border: thick $primary;
+    padding: 1 2;
+    align: center middle;
+}
+
+.modal-title {
+    text-align: center;
+    text-style: bold;
+    color: $primary;
+    margin-bottom: 1;
+}
+
+#about-text {
+    height: auto;
+    margin: 1 0;
+    color: $text;
+}
+
+.modal-buttons {
+    width: 100%;
+    align: center middle;
+    margin-top: 1;
+}
+
+.modal-buttons Button {
+    margin: 0 1;
+}

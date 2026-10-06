@@ -1,0 +1,47 @@
+/* Estilos Exclusivos da Tela de Menu */
+
+#menu-container {
+    width: 72;
+    height: auto;
+    border: heavy $accent;
+    background: $panel;
+    padding: 1 2;
+    align: center middle;
+}
+
+#menu-title {
+    text-align: center;
+    color: $accent;
+    text-style: bold;
+    margin-bottom: 1;
+}
+
+#menu-subtitle {
+    text-align: center;
+    color: $text-muted;
+    margin-bottom: 1;
+}
+
+#menu-category-info {
+    text-align: center;
+    background: $boost;
+    color: $warning;
+    padding: 0 1;
+    margin-bottom: 1;
+    border: round $primary;
+}
+
+#menu-buttons {
+    width: 100%;
+    align: center middle;
+}
+
+.menu-btn {
+    width: 46;
+    margin: 1 0;
+}
+
+.menu-btn:focus {
+    border: heavy $accent;
+    background: $accent-muted;
+}

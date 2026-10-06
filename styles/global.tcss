@@ -1,0 +1,29 @@
+/* Estilos Globais e Design System do Jogo da Forca */
+
+Screen {
+    background: $surface;
+    color: $text;
+    align: center middle;
+}
+
+/* Foco em Alto Contraste para Navegação por Teclado */
+Button:focus {
+    border: heavy $warning;
+    background: $warning-muted;
+    text-style: bold;
+    color: $text;
+}
+
+OptionList:focus {
+    border: heavy $accent;
+}
+
+Input:focus {
+    border: heavy $warning;
+    background: $boost;
+}
+
+ModalScreen {
+    align: center middle;
+    background: rgba(0, 0, 0, 0.75);
+}
