@@ -1,6 +1,6 @@
 """
 Tela Principal do Jogo da Forca.
-Herda de BaseGameScreen, utilizando KeyboardGridController para navegação 2D.
+Suporta Layouts Dinâmicos Horizontal e Vertical orientados pelo aspect ratio da janela.
 """
 
 from __future__ import annotations
@@ -15,6 +15,7 @@ from textual.widgets import Button, Footer, Header, Label, Static
 
 from controllers.keyboard_grid_controller import KeyboardGridController
 from core.models import Categoria, GameState
+from core.orientation import OrientationDetector, OrientationType
 from interfaces.base_screen import BaseGameScreen
 
 if TYPE_CHECKING:
@@ -24,7 +25,8 @@ if TYPE_CHECKING:
 class GameScreen(BaseGameScreen):
     """
     Tela principal da partida da Forca.
-    Controlada via KeyboardGridController com navegação 2D por setas e Enter para aplicar.
+    Adapta automaticamente a disposição espacial entre Horizontal (lado a lado)
+    e Vertical (forca em cima, teclado embaixo) conforme a proporção da janela.
     """
 
     CSS_PATH = Path(__file__).parent / "game.tcss"
@@ -41,18 +43,19 @@ class GameScreen(BaseGameScreen):
         super().__init__()
         self.categoria_inicial = categoria
         self.state: Optional[GameState] = None
-        self.controller = KeyboardGridController(initial_row=1, initial_col=0)
+        self.controller = KeyboardGridController(initial_row=0, initial_col=0)
+        self.current_orientation: OrientationType = OrientationType.HORIZONTAL
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
         
         with Container(id="game-body"):
-            # Coluna Esquerda: Forca ASCII e Vidas
-            with Vertical(id="forca-panel"):
+            # Painel da Forca (Lado esquerdo no Horizontal, Topo no Vertical)
+            with Container(id="forca-panel"):
                 yield Static(id="forca-art")
                 yield Label(id="vidas-display")
 
-            # Coluna Direita: Jogo
+            # Painel Principal (Lado direito no Horizontal, Base no Vertical)
             with Vertical(id="game-main-panel"):
                 with Horizontal():
                     yield Label(id="badge-categoria")
@@ -79,9 +82,25 @@ class GameScreen(BaseGameScreen):
         yield Footer()
 
     def on_mount(self) -> None:
+        self.ajustar_orientacao(self.size.width, self.size.height)
         app: ForcaApp = self.app  # type: ignore
         self.iniciar_nova_partida(self.categoria_inicial or app.selected_category)
         self.focar_elemento_atual()
+
+    def on_resize(self, event: events.Resize) -> None:
+        self.ajustar_orientacao(event.size.width, event.size.height)
+
+    def ajustar_orientacao(self, width: int, height: int) -> None:
+        """Aplica dinamicamente as classes de layout horizontal ou vertical."""
+        orientacao = OrientationDetector.detect(width, height)
+        self.current_orientation = orientacao
+
+        if orientacao == OrientationType.VERTICAL:
+            self.remove_class("layout-horizontal")
+            self.add_class("layout-vertical")
+        else:
+            self.remove_class("layout-vertical")
+            self.add_class("layout-horizontal")
 
     def iniciar_nova_partida(self, categoria: Optional[Categoria] = None) -> None:
         """Inicializa nova rodada e reseta o controlador e teclado."""

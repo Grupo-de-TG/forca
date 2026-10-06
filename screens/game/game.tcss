@@ -1,4 +1,4 @@
-/* Estilos Exclusivos da Tela do Jogo da Forca - Layout Fluido e Redimensionável */
+/* Estilos da Tela do Jogo da Forca - Layouts Dinâmicos Horizontal e Vertical */
 
 #game-header {
     dock: top;
@@ -10,7 +10,10 @@
     border-bottom: solid $primary;
 }
 
-#game-body {
+/* ========================================================= */
+/* 1. LAYOUT HORIZONTAL (Landscape / Widescreen)             */
+/* ========================================================= */
+.layout-horizontal #game-body {
     width: 100%;
     height: 1fr;
     layout: grid;
@@ -20,8 +23,7 @@
     overflow-y: auto;
 }
 
-/* Painel Esquerdo: Forca ASCII (1fr) */
-#forca-panel {
+.layout-horizontal #forca-panel {
     background: $panel;
     border: round $primary;
     padding: 1;
@@ -29,17 +31,16 @@
     height: 100%;
     width: 100%;
     min-width: 20;
-    overflow-y: auto;
 }
 
-#forca-art {
+.layout-horizontal #forca-art {
     color: $warning;
     text-style: bold;
     text-align: center;
     width: 100%;
 }
 
-#vidas-display {
+.layout-horizontal #vidas-display {
     text-align: center;
     color: $error;
     text-style: bold;
@@ -47,8 +48,7 @@
     width: 100%;
 }
 
-/* Painel Direito: Conteúdo e Jogo (2fr) */
-#game-main-panel {
+.layout-horizontal #game-main-panel {
     background: $panel;
     border: round $accent;
     padding: 1 2;
@@ -59,6 +59,58 @@
     overflow-y: auto;
 }
 
+/* ========================================================= */
+/* 2. LAYOUT VERTICAL (Portrait / Janela Estreita)           */
+/* ========================================================= */
+.layout-vertical #game-body {
+    width: 100%;
+    height: 1fr;
+    layout: vertical;
+    padding: 0 1;
+    overflow-y: auto;
+}
+
+.layout-vertical #forca-panel {
+    background: $panel;
+    border: round $primary;
+    padding: 0 1;
+    align: center middle;
+    height: auto;
+    max-height: 10;
+    width: 100%;
+    layout: horizontal;
+    margin-bottom: 1;
+}
+
+.layout-vertical #forca-art {
+    color: $warning;
+    text-style: bold;
+    text-align: center;
+    width: auto;
+    margin-right: 3;
+}
+
+.layout-vertical #vidas-display {
+    text-align: center;
+    color: $error;
+    text-style: bold;
+    width: auto;
+}
+
+.layout-vertical #game-main-panel {
+    background: $panel;
+    border: round $accent;
+    padding: 1;
+    height: 1fr;
+    width: 100%;
+    layout: vertical;
+    align: center top;
+    overflow-y: auto;
+}
+
+/* ========================================================= */
+/* ELEMENTOS COMUNS                                          */
+/* ========================================================= */
 #badge-categoria {
     color: $accent;
     text-style: bold;
@@ -113,7 +165,7 @@
     color: $error;
 }
 
-/* Teclado Virtual Fluido */
+/* Teclado Virtual */
 #teclado-container {
     height: auto;
     width: 100%;
@@ -140,7 +192,6 @@
     border: solid $secondary;
 }
 
-/* Tecla focada/selecionada */
 .key-btn:focus {
     border: heavy $warning;
     background: $warning;
