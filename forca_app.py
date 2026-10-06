@@ -1,6 +1,7 @@
 """
 Aplicação Textual TUI do Jogo da Forca - SysOps Edition.
-Transcreve e expande o projeto forca.sh com telas, modais e componentes reativos.
+Com arquitetura de controles dedicada, navegação por setas,
+buffer de digitação (Letra + Enter) e atalhos compostos (Ctrl+...).
 """
 
 from __future__ import annotations
@@ -12,6 +13,7 @@ from textual import events
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Container, Horizontal, Vertical, Grid
+from textual.message import Message
 from textual.screen import Screen, ModalScreen
 from textual.widgets import (
     Button,
@@ -28,34 +30,92 @@ from forca_game import ForcaEngine, Categoria, GameState
 
 
 # ==========================================
+# COMPONENTE DE CONTROLE DE ENTRADA (WIDGET DEDICADO)
+# ==========================================
+class LetterInputController(Vertical):
+    """
+    Componente de controle dedicado para entrada de jogadas.
+    Permite digitar uma letra em rascunho, pensar, apagar com Backspace
+    e só processar a tentativa quando o usuário pressionar Enter.
+    """
+
+    class LetterSubmitted(Message):
+        """Disparado quando uma letra é confirmada pelo jogador via Enter."""
+        def __init__(self, letter: str) -> None:
+            super().__init__()
+            self.letter = letter
+
+    def compose(self) -> ComposeResult:
+        with Container(id="input-controller-box"):
+            with Horizontal(id="input-letra-row"):
+                yield Label("Sua Letra: ", id="lbl-sua-letra")
+                yield Input(
+                    placeholder="_",
+                    max_length=1,
+                    id="letra-input",
+                    valid_empty=False
+                )
+                yield Button("Confirmar Letra [Enter]", id="btn-enviar-letra", variant="success")
+            yield Static("💡 Dica: Digite a letra, confira e tecle Enter. Use as [b]setas[/b] para navegar.", id="input-dica")
+
+    def on_mount(self) -> None:
+        self.query_one("#letra-input", Input).focus()
+
+    def set_letter(self, letter: str) -> None:
+        """Permite carregar uma letra no campo de rascunho (ex: via teclado virtual)."""
+        inp = self.query_one("#letra-input", Input)
+        inp.value = letter.upper()
+        inp.focus()
+
+    def submit_current_letter(self) -> None:
+        """Valida e emite a letra digitada."""
+        inp = self.query_one("#letra-input", Input)
+        val = inp.value.strip()
+        if val and val.isalpha():
+            self.post_message(self.LetterSubmitted(val.upper()))
+            inp.value = ""
+        inp.focus()
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        self.submit_current_letter()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "btn-enviar-letra":
+            self.submit_current_letter()
+
+
+# ==========================================
 # MODAL: CHUTAR PALAVRA COMPLETA (ALL-IN)
 # ==========================================
 class ChuteModal(ModalScreen[Optional[str]]):
-    """Modal para arriscar a palavra inteira (o comando ! do forca.sh)."""
+    """Modal para arriscar a palavra inteira (All-In)."""
+
+    BINDINGS = [
+        Binding("escape", "cancelar", "Cancelar"),
+    ]
 
     def compose(self) -> ComposeResult:
         with Container(classes="modal-dialog"):
-            yield Label("🎯 CHUTE ALL-IN", classes="modal-title")
+            yield Label("🎯 CHUTE ALL-IN (Palavra Completa)", classes="modal-title")
             yield Static(
                 "Atenção: Se acertar, você vence na hora!\n"
-                "Se errar a palavra, você é enforcado imediatamente.",
+                "Se errar a palavra, todas as vidas serão perdidas.\n",
                 id="chute-aviso",
             )
             yield Input(placeholder="Digite a palavra completa...", id="chute-input")
             with Horizontal(classes="modal-buttons"):
-                yield Button("Confirmar Chute", id="btn-confirmar-chute", variant="warning")
-                yield Button("Cancelar", id="btn-cancelar-chute", variant="default")
+                yield Button("Confirmar Chute [Enter]", id="btn-confirmar-chute", variant="warning")
+                yield Button("Cancelar [Esc]", id="btn-cancelar-chute", variant="default")
 
     def on_mount(self) -> None:
-        # Foca automaticamente no campo de texto
         self.query_one("#chute-input", Input).focus()
+
+    def action_cancelar(self) -> None:
+        self.dismiss(None)
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
         val = event.value.strip()
-        if val:
-            self.dismiss(val)
-        else:
-            self.dismiss(None)
+        self.dismiss(val if val else None)
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "btn-confirmar-chute":
@@ -64,16 +124,19 @@ class ChuteModal(ModalScreen[Optional[str]]):
         elif event.button.id == "btn-cancelar-chute":
             self.dismiss(None)
 
-    def on_key(self, event: events.Key) -> None:
-        if event.key == "escape":
-            self.dismiss(None)
-
 
 # ==========================================
 # MODAL: FIM DE JOGO (VITÓRIA OU DERROTA)
 # ==========================================
 class GameOverModal(ModalScreen[str]):
-    """Modal exibido ao finalizar a partida."""
+    """Modal exibido ao finalizar a partida com estatísticas."""
+
+    BINDINGS = [
+        Binding("ctrl+r", "replay", "Jogar Novamente"),
+        Binding("ctrl+c", "categories", "Categorias"),
+        Binding("ctrl+m", "menu", "Menu"),
+        Binding("escape", "menu", "Menu"),
+    ]
 
     def __init__(self, state: GameState):
         super().__init__()
@@ -98,73 +161,86 @@ class GameOverModal(ModalScreen[str]):
 
             with Horizontal(classes="modal-buttons"):
                 yield Button("Jogar Novamente [Enter]", id="btn-replay", variant="success")
-                yield Button("Trocar Categoria [C]", id="btn-cat", variant="primary")
-                yield Button("Menu Principal [M]", id="btn-menu", variant="default")
+                yield Button("Trocar Categoria", id="btn-cat", variant="primary")
+                yield Button("Menu Principal", id="btn-menu", variant="default")
+
+    def on_mount(self) -> None:
+        self.query_one("#btn-replay", Button).focus()
+
+    def action_replay(self) -> None:
+        self.dismiss("replay")
+
+    def action_categories(self) -> None:
+        self.dismiss("categories")
+
+    def action_menu(self) -> None:
+        self.dismiss("menu")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "btn-replay":
-            self.dismiss("replay")
+            self.action_replay()
         elif event.button.id == "btn-cat":
-            self.dismiss("categories")
+            self.action_categories()
         elif event.button.id == "btn-menu":
-            self.dismiss("menu")
-
-    def on_key(self, event: events.Key) -> None:
-        if event.key in ("enter", "space"):
-            self.dismiss("replay")
-        elif event.key == "c":
-            self.dismiss("categories")
-        elif event.key in ("m", "escape"):
-            self.dismiss("menu")
+            self.action_menu()
 
 
 # ==========================================
 # MODAL: SOBRE / REGRAS
 # ==========================================
 class AboutModal(ModalScreen[None]):
-    """Modal com informações do projeto e créditos."""
+    """Modal com informações do projeto e controles."""
+
+    BINDINGS = [
+        Binding("escape", "fechar", "Fechar"),
+        Binding("enter", "fechar", "Fechar"),
+    ]
 
     def compose(self) -> ComposeResult:
         with Container(classes="modal-dialog"):
-            yield Label("ℹ️ SOBRE O PROJETO", classes="modal-title")
+            yield Label("ℹ️ SOBRE & CONTROLES", classes="modal-title")
             yield Static(
                 "🎮 [b]Jogo da Forca - SysOps Edition[/b]\n\n"
                 "• [b]Autor:[/b] Ryan Henrique Bezerra da Silva\n"
-                "• [b]Tecnologias:[/b] Python + Textual (TUI Moderna)\n"
-                "• [b]Origem:[/b] Projeto de Sistemas Operacionais II migrado de Shell Script (forca.sh)\n"
-                "• [b]Atalhos:[/b]\n"
-                "  - Letras [A-Z]: Chutar letra\n"
-                "  - [!]: Chutar palavra inteira (All-In)\n"
-                "  - [R]: Reiniciar partida\n"
-                "  - [Esc]: Voltar / Sair\n",
+                "• [b]Tecnologia:[/b] Python + Textual TUI\n\n"
+                "🎯 [b]Como Jogar & Controles:[/b]\n"
+                "  - [b]Setas (↑ ↓ ← →) e Tab:[/b] Navegar pelos botões e campos\n"
+                "  - [b]Letra + Enter:[/b] Digita uma letra no campo e confirma com Enter\n"
+                "  - [b]Ctrl + F:[/b] Chutar Palavra Completa (All-In)\n"
+                "  - [b]Ctrl + R:[/b] Reiniciar com nova palavra\n"
+                "  - [b]Ctrl + M:[/b] Voltar ao Menu Principal\n"
+                "  - [b]Ctrl + Q:[/b] Sair do Jogo\n",
                 id="about-text"
             )
             with Horizontal(classes="modal-buttons"):
-                yield Button("Fechar [Enter / Esc]", id="btn-close-about", variant="primary")
+                yield Button("Entendido [Enter / Esc]", id="btn-close-about", variant="primary")
 
-    def on_button_pressed(self, event: Button.Pressed) -> None:
+    def on_mount(self) -> None:
+        self.query_one("#btn-close-about", Button).focus()
+
+    def action_fechar(self) -> None:
         self.dismiss(None)
 
-    def on_key(self, event: events.Key) -> None:
-        if event.key in ("enter", "escape", "space"):
-            self.dismiss(None)
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        self.action_fechar()
 
 
 # ==========================================
 # TELA: SELEÇÃO DE CATEGORIAS
 # ==========================================
 class CategoryScreen(Screen):
-    """Tela para selecionar a categoria de palavras."""
+    """Tela para selecionar o tema com navegação por setas."""
 
     BINDINGS = [
         Binding("escape", "voltar", "Voltar"),
+        Binding("ctrl+m", "voltar", "Voltar"),
         Binding("enter", "confirmar", "Confirmar"),
     ]
 
     def compose(self) -> ComposeResult:
         with Container(id="category-container"):
             yield Label("📂 ESCOLHA UMA CATEGORIA", id="menu-title")
-            yield Static("Selecione um tema de palavras da pasta 'listas/' ou escolha aleatório:", id="menu-subtitle")
+            yield Static("Use as setas [b]↑ e ↓[/b] para navegar pelas listas e [b]Enter[/b] para confirmar:", id="menu-subtitle")
             yield OptionList(id="category-list")
             with Horizontal(classes="modal-buttons"):
                 yield Button("Selecionar [Enter]", id="btn-select-cat", variant="success")
@@ -183,8 +259,8 @@ class CategoryScreen(Screen):
             label = f"📁 {cat.nome} ({cat.total_palavras} palavras)"
             option_list.add_option(Option(label, id=f"cat_{i}"))
 
-        # Seleciona o primeiro
         option_list.highlighted = 0
+        option_list.focus()
 
     def action_voltar(self) -> None:
         self.app.pop_screen()
@@ -213,12 +289,13 @@ class CategoryScreen(Screen):
 # TELA: JOGO DA FORCA
 # ==========================================
 class GameScreen(Screen):
-    """Tela principal do jogo."""
+    """Tela principal da partida com atalhos compostos e controle por setas."""
 
     BINDINGS = [
-        Binding("escape", "menu_principal", "Menu"),
-        Binding("exclamation_mark", "chutar_tudo", "Chutar Palavra (!)"),
-        Binding("r", "reiniciar", "Reiniciar"),
+        Binding("ctrl+m", "menu_principal", "Menu"),
+        Binding("ctrl+f", "chutar_tudo", "Chutar Palavra"),
+        Binding("ctrl+r", "reiniciar", "Nova Palavra"),
+        Binding("ctrl+q", "sair_jogo", "Sair"),
     ]
 
     TECLADO_LINHAS = [
@@ -236,12 +313,12 @@ class GameScreen(Screen):
         yield Header(show_clock=True)
         
         with Container(id="game-body"):
-            # Coluna Esquerda: Desenho da Forca e Vidas
+            # Coluna Esquerda: Forca ASCII e Vidas
             with Vertical(id="forca-panel"):
                 yield Static(id="forca-art")
                 yield Label(id="vidas-display")
 
-            # Coluna Direita: Jogo
+            # Coluna Direita: Jogo e Controles
             with Vertical(id="game-main-panel"):
                 with Horizontal():
                     yield Label(id="badge-categoria")
@@ -253,7 +330,10 @@ class GameScreen(Screen):
                     yield Label("Letras Certas: [green]-[/green]", id="letras-certas-box", classes="letras-label")
                     yield Label("Letras Erradas: [red]-[/red]", id="letras-erradas-box", classes="letras-label")
 
-                # Teclado Virtual Interativo
+                # Controlador de Entrada de Letra (Buffer + Confirmação com Enter)
+                yield LetterInputController(id="input-controller")
+
+                # Teclado Virtual Interativo (Navegável por setas/clique)
                 with Vertical(id="teclado-container"):
                     for linha in self.TECLADO_LINHAS:
                         with Horizontal(classes="teclado-linha"):
@@ -261,9 +341,9 @@ class GameScreen(Screen):
                                 yield Button(letra, id=f"key-{letra.lower()}", classes="key-btn")
 
         with Horizontal(id="game-actions"):
-            yield Button("🎯 Chutar Palavra (!)", id="btn-chutar", variant="warning", classes="action-btn")
-            yield Button("🔄 Nova Palavra [R]", id="btn-nova-palavra", variant="primary", classes="action-btn")
-            yield Button("🏠 Menu [Esc]", id="btn-voltar-menu", variant="default", classes="action-btn")
+            yield Button("🎯 Chutar Palavra [Ctrl+F]", id="btn-chutar", variant="warning", classes="action-btn")
+            yield Button("🔄 Nova Palavra [Ctrl+R]", id="btn-nova-palavra", variant="primary", classes="action-btn")
+            yield Button("🏠 Menu [Ctrl+M]", id="btn-voltar-menu", variant="default", classes="action-btn")
 
         yield Footer()
 
@@ -275,9 +355,10 @@ class GameScreen(Screen):
         self.state = self.app.engine.novo_jogo(categoria)
         self.atualizar_ui()
         self.resetar_teclado()
+        self.query_one("#letra-input", Input).focus()
 
     def atualizar_ui(self) -> None:
-        """Sincroniza todos os widgets visuais com o estado atual do jogo."""
+        """Sincroniza os widgets visuais com o estado atual do jogo."""
         if not self.state:
             return
 
@@ -331,6 +412,10 @@ class GameScreen(Screen):
         if self.state.fim_de_jogo:
             self.exibir_modal_fim_de_jogo()
 
+    def on_letter_input_controller_letter_submitted(self, message: LetterInputController.LetterSubmitted) -> None:
+        """Recebe o evento de confirmação de letra vindo do controlador."""
+        self.tentar_letra(message.letter)
+
     def action_chutar_tudo(self) -> None:
         if not self.state or self.state.fim_de_jogo:
             return
@@ -340,6 +425,8 @@ class GameScreen(Screen):
                 self.state, acertou = self.app.engine.processar_chute(self.state, chute)
                 self.atualizar_ui()
                 self.exibir_modal_fim_de_jogo()
+            else:
+                self.query_one("#letra-input", Input).focus()
 
         self.app.push_screen(ChuteModal(), callback_chute)
 
@@ -360,11 +447,16 @@ class GameScreen(Screen):
     def action_menu_principal(self) -> None:
         self.app.pop_screen()
 
+    def action_sair_jogo(self) -> None:
+        self.app.exit()
+
     def on_button_pressed(self, event: Button.Pressed) -> None:
         btn_id = event.button.id or ""
         if btn_id.startswith("key-"):
             letra = btn_id.replace("key-", "")
-            self.tentar_letra(letra)
+            # Ao clicar no teclado virtual, coloca a letra no buffer do controlador
+            ctrl = self.query_one("#input-controller", LetterInputController)
+            ctrl.set_letter(letra)
         elif btn_id == "btn-chutar":
             self.action_chutar_tudo()
         elif btn_id == "btn-nova-palavra":
@@ -372,28 +464,17 @@ class GameScreen(Screen):
         elif btn_id == "btn-voltar-menu":
             self.action_menu_principal()
 
-    def on_key(self, event: events.Key) -> None:
-        # Pressionar "!" abre o modal de chute
-        if event.character == "!":
-            self.action_chutar_tudo()
-            return
-
-        # Captura digitação direta no teclado (A-Z ou ç)
-        if event.character and (event.character.isalpha() or event.character == "ç"):
-            self.tentar_letra(event.character)
-
 
 # ==========================================
 # TELA: MENU PRINCIPAL
 # ==========================================
 class MenuScreen(Screen):
-    """Tela de abertura / Menu Principal."""
+    """Tela de abertura com navegação por setas e atalhos compostos."""
 
     BINDINGS = [
-        Binding("enter", "jogar", "Jogar"),
-        Binding("c", "categorias", "Categorias"),
-        Binding("s", "sobre", "Sobre"),
-        Binding("q", "sair", "Sair"),
+        Binding("ctrl+q", "sair", "Sair"),
+        Binding("ctrl+s", "sobre", "Sobre"),
+        Binding("ctrl+c", "categorias", "Categorias"),
     ]
 
     ASCII_LOGO = """
@@ -413,17 +494,20 @@ class MenuScreen(Screen):
 
             with Vertical(id="menu-buttons"):
                 yield Button("🚀 Iniciar Jogo [Enter]", id="btn-jogar", variant="success", classes="menu-btn")
-                yield Button("📂 Escolher Categoria [C]", id="btn-categorias", variant="primary", classes="menu-btn")
-                yield Button("ℹ️ Sobre / Regras [S]", id="btn-sobre", variant="default", classes="menu-btn")
-                yield Button("🚪 Sair do Jogo [Q]", id="btn-sair", variant="error", classes="menu-btn")
+                yield Button("📂 Escolher Categoria [Ctrl+C]", id="btn-categorias", variant="primary", classes="menu-btn")
+                yield Button("ℹ️ Sobre & Controles [Ctrl+S]", id="btn-sobre", variant="default", classes="menu-btn")
+                yield Button("🚪 Sair do Jogo [Ctrl+Q]", id="btn-sair", variant="error", classes="menu-btn")
 
         yield Footer()
 
-    def on_screen_resume(self) -> None:
-        self.atualizar_categoria_info()
-
     def on_mount(self) -> None:
         self.atualizar_categoria_info()
+        # Foca no primeiro botão para permitir navegação com setas ↑ e ↓ imediatamente
+        self.query_one("#btn-jogar", Button).focus()
+
+    def on_screen_resume(self) -> None:
+        self.atualizar_categoria_info()
+        self.query_one("#btn-jogar", Button).focus()
 
     def atualizar_categoria_info(self) -> None:
         cat = self.app.selected_category
