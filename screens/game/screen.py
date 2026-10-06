@@ -1,6 +1,6 @@
 """
 Tela Principal do Jogo da Forca.
-100% Teclado Físico: Slot de letra selecionável/focável com underline e navegação por setas.
+100% Teclado Físico: Slot de letra selecionável/focável centralizado na linha com underline.
 Layouts Dinâmicos Horizontal e Vertical orientados pela proporção 40/60.
 """
 
@@ -31,7 +31,7 @@ class LetterSlot(Static):
 class GameScreen(BaseGameScreen):
     """
     Tela principal da partida da Forca.
-    O slot de letra é uma área focável: teclar Enter nele envia a letra.
+    O slot de letra é centralizado na linha e focável: teclar Enter nele envia a letra.
     Navegar para baixo foca os botões de ação (Chutar, Nova Palavra, Menu).
     """
 
@@ -70,8 +70,9 @@ class GameScreen(BaseGameScreen):
 
                 # Painel de Inserção de Letras, Status e Histórico
                 with Vertical(id="insert-letras-panel"):
-                    # Slot Focável de Letra com Underline
-                    yield LetterSlot("Letra: [u]_[/u]", id="slot-letra")
+                    # Linha com o Slot de Letra Centralizado
+                    with Horizontal(id="slot-letra-row"):
+                        yield LetterSlot("Letra: [u]_[/u]", id="slot-letra")
 
                     yield Label(id="status-mensagem")
 

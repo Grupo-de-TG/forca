@@ -150,17 +150,24 @@
     align: center top;
 }
 
+/* Linha com Slot de Letra Centralizado */
+#slot-letra-row {
+    height: auto;
+    width: 100%;
+    align: center middle;
+    margin: 1 0;
+}
+
 /* Slot Focável com Underline: Letra: _ */
 LetterSlot {
     height: 3;
     width: auto;
     min-width: 20;
-    align: center middle;
-    margin: 1 0;
-    padding: 0 2;
+    content-align: center middle;
+    text-align: center;
     border: round $secondary;
     background: $boost;
-    text-align: center;
+    padding: 0 2;
 }
 
 LetterSlot:focus {
