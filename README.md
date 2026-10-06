@@ -1,120 +1,179 @@
--98as Operacionais II
-Turma 2026 1º Semestre de Analise e Desenvolvimento de Sistemas
-Ryan Henrique Bezerra da Silva
+# 🎮 Jogo da Forca - SysOps Edition
 
-Data 09 de abril de 2026
+> Uma evolução moderna do clássico jogo de forca em terminal: de um script monolítico em **Bash** para uma aplicação **TUI orientada a objetos com Python e Textual**.
 
-___
+---
 
-O projeto proposto é o desenvolvimento de um jogo CLI de forca em bash, visando pratica e aprofundamento no uso de Shell Script e terminal linux. Os principais comandos e tecnologias utilizadas:
-* $echo para output no terminal, 
-* $RAMDON para escolha aleatoria de palavras
-* While para o controle de sessão principal, cada rodada é feita dentro de um while
-* shopt -S para o set de arquivos recursivamente
+## 📑 Sumário
 
-# Como foi construido
-Como base eu utilizei o projeto Termonal[https://github.com/viniciuskant/termonal/tree/main], que é uma implementação do jogo de adivinhação de palavras Termo para linha de comando.
-O projeto foi minha principal fonte de palavras em arquivos .txt e como pricipal estrategia eu listei um numero x de palavras por sessao aleatoriamente, isso foi definido no esboço do projeto junto do que deveria ser o frontend em um file separado, ainda sobre esse esboço eu defini que a sessao seria dentro de um while e que coisas como definir qual palavra seria escolhida e sua divisao em letras seria feita pre-carregadas.
+- [Visão Geral](#-visão-geral)
+- [Evolução: Do Bash (.sh) ao Textual (Python POO)](#-evolução-do-bash-sh-ao-textual-python-poo)
+- [Novas Funcionalidades e Telas](#-novas-funcionalidades-e-telas)
+- [Arquitetura do Projeto](#-arquitetura-do-projeto)
+- [Sistema de Pontuação e Ranking](#-sistema-de-pontuação-e-ranking)
+- [Controles e Navegação por Teclado](#-controles-e-navegação-por-teclado)
+- [Como Executar](#-como-executar)
+- [Histórico do Projeto Original (Bash)](#-histórico-do-projeto-original-bash)
 
-A montagem do DB de palavras se resume em usar o `shopt -S globstar`  puxando todos os txt para uma var de arquivos e construir o db com um indice randomico de 10 palavras, depois fazer o split de uma entre as 10 definida também com `$RANDOM` para termos a palavra da vez. 
+---
 
-## Como foram separadas as funções
-Aqui foi onde eu gastei um tempo refazendo, porque minha definição de qual parte do codigo merecia ter uma função própria foi refeita algumas vezes, por exemplo o $desenhar_header faria apenas a introdução do jogo e os updates seriam feitos por outra função que chamaria a $desenhar_hader quantas vezes fossem nescessarias. 
+## 🎯 Visão Geral
 
-\$desenhar_header() é responsavel por fazer o frontend e atualizar visualmente o andamento ta partida. Aqui eu apanhei bastante porque eu não consegui passar direito os novos valores quando o jogador acertava as letras, atualizar os arrays era ok mas atualizar os underlines conforme ele acertava deu um trabalho, isso inclusive me fez refazer o gerar_progresso.
+O **Jogo da Forca - SysOps Edition** é um jogo de terminal interativo com estética *SysOps / Dark Terminal*, desenvolvido com foco em alta responsividade, navegação 100% via teclado físico (sem necessidade de mouse) e código modularizado seguindo princípios rígidos de POO (Programação Orientada a Objetos).
 
-\$gerar_progresso() esta la para atualizar os arrays de letras certas e erradas conforme a comparação com o array da palavra da vez.
+---
 
-\processar_chute() É uma função para _All win_ onde o jogador pode gastar todos os trials e dizer qual é a palavra. Funciona dependente da dica (uma das ultimas a serem desenvolvidas) porque fazer o set de dicas para files de palavras foi volumoso e demorado, para o meu azar o dict - Dicionario CLI, só funciona bem em ingles então todas as palavras precisaram de uma linha em outro file correspondente com as dicas.
+## 🚀 Evolução: Do Bash (`.sh`) ao Textual (Python POO)
 
-\processar_tentativa() faz a tratativa de entrada, nele tem tratamento para input apenas de letras, verificação de tentativas repetidas, letras unicas e por fim se a letra está na palavra ou não. Aqui eu apanhei para definir os retornos, durante um tempo voce só sairia do jogo se forçasse um chute, como saida eu utilizei numeros diferentes para cada estagio onde teria uma verificação e dentro do while principal defini o valor de return que deveria "quebrar" a sessão com -eq.
+| Característica | Versão Original (`forca.sh`) | Versão Atual (Textual POO) |
+| :--- | :--- | :--- |
+| **Linguagem / Stack** | Bash CLI (`echo`, `sed`, `tr`, `read`) | Python 3 + Textual Framework |
+| **Arquitetura** | Monolítico procedural em arquivo único | Arquitetura POO modular (Controllers, Interfaces, Screens, Modals, Models, Services) |
+| **Interface / TUI** | Saída estática via `clear` + `echo` sequencial | TUI reativa com widgets, layout CSS (`.tcss`) e redimensionamento dinâmico |
+| **Layout Responsivo** | Rígido (tamanho fixo de linhas de terminal) | **Detecção de Aspect Ratio**: alterna dinamicamente entre **Horizontal** e **Vertical** respeitando a regra de **40/60** (View da Forca / Painel de Jogo) |
+| **Navegação** | Apenas digitação sequencial no `read` | **100% Teclado Físico**: Setas, atalhos de acorde (`Ctrl+F`, `Ctrl+R`, `Ctrl+M`, `Ctrl+Esc`) e slot de letra dedicado |
+| **Perfis de Jogador** | Inexistente (sessão volátil) | **Sistema de Jogadores**: Cadastro, seleção rápida de perfis recentes e histórico |
+| **Persistência / Ranking** | Sem persistência | **Ranking Geral (Leaderboard)** persistido em JSON com pontuações, vitórias, taxa de acerto e *streaks* |
+| **Normalização** | `sed` básico substituindo caracteres | Normalização Unicode NFKD completa (suporte a acentos, cedilha e maiúsculas/minúsculas) |
 
-## Melhorias
-Dicas de palavra, isso deve reutilizar a estrutura atual mas vai acrescentar o trabalho de duplicar a base atual de palavras mas relacionando cada uma ao indice da sua dica correspondente. Deve ter jeito melhor de fazer.
+---
 
-Rerun, eu não fiz um bom rerun, ele no maximo vai rodar tudo de novo sem evitar que a mesma sessão seja repetida logo na sequencia por exemplo.
+## 🖥️ Novas Funcionalidades e Telas
 
+A aplicação conta com 4 telas principais e 2 modais contextuais sobrepostos:
 
-# Perguntas de Verificação ( I'm not a robot?)
+### 1. 🏠 Menu Principal (`MenuScreen`)
+- Logo em arte ASCII estilizada.
+- Botões de navegação rápida:
+  - `Iniciar Jogo [Enter]` ➡️ Abre a Seleção de Jogador.
+  - `Ranking [R]` ➡️ Abre o Leaderboard Geral.
+  - `Sair do Jogo [Ctrl+Esc]`.
 
-P1- O esboço foi definido com preciso de um DB de palavras partindo de um file ou do dict que eu sabia que poderia usar para me retornar uma palavra com alguns parametros. O que mudou muito foi a estrutura do codigo em sí, tinha menos funções e o set da palavra era feito dentro do while a principio.
-Acho que a principal motivação foi eu ter jogado o "frontend" para outro file então eu tinha mais espaço para organizar as coisas fora do meu main e botar pra rodar no while (eu puxei o front de volta par um file só na revisão para me enquadrar na regra do file unico)
+### 2. 👤 Seleção de Jogador (`SelectPlayerScreen`)
+- Identificação por apelido/tag.
+- Seleção direta via lista rápida de jogadores recentes (`OptionList`).
+- Criação e carregamento transparente de perfil.
 
-P2-  
-* Busca recursiva de files em um dir com globstar e filtro pela extensão do file, todos para o array de arquivos.
-* Escolha de um file com `$RANDOM` que gera apenas um int aleatório a principio, mas com o uso do modulo eu posso limitar o escopo do random para algo valido dividindo esse numero aleatorio por um valor fixo e usando o resto dessa divisão como o meu numero escolhido.
+### 3. 🎮 Tela de Jogo (`GameScreen`)
+- **Grid Adaptativo 40/60:** A View da Forca (desenho ASCII dos 6 estágios + vidas) e o Painel de Interação se reorganizam em coluna ou linha dependendo da proporção da janela do terminal.
+- **Slot de Letra Centralizado:** Exibe `Letra: _` inline, atualizando em tempo real conforme a letra física é digitada.
+- **Prevenção de Colisão:** O slot é focável e isolado para que o `Enter` envie apenas a letra sem acionar botões indesejados.
+- **Ações Inferiores Proporcionais:** 3 botões em texto limpo dividindo igualmente o rodapé (`Chutar [Ctrl+F]`, `Refresh [Ctrl+R]`, `Menu [Ctrl+M]`).
 
-P3-
-## While e if
-``` Shell
-while ((tentativas_restantes>0)); do
-    progresso=$(gerar_progresso)
-    desenhar_header "$tentativas_restantes" "$progresso" "${letras_certas[*]}" "${letras_erradas[*]}"
-    read -p 'Digite uma letra: ' tentativa
-    if [[ "$tentativa" == "!" ]]; then
-        processar_chute
-        resultado=$?
-        if [[ $resultado -eq 0 ]]; then
-            break
-        else
-            tentativas_restantes=0
-            break
-        fi
-    else
-        processar_tentativa "$tentativa"
-        resultado=$?
-        if [[ $resultado -eq 0 ]]; then
-            letras_certas+=("$tentativa")
-        elif [[ $resultado -eq 1 ]]; then
-            letras_erradas+=("$tentativa")
-            ((tentativas_restantes--))
-        fi
-    fi
-    progresso=$(gerar_progresso)
-    #desenhar_header "$tentativas_restantes" "$progresso" "${letras_certas[*]}" "${letras_erradas[*]}"
-    if [[ ! "$progresso" =~ "_" ]]; then
-        echo " Você venceu! Palavra: $palavra"
-        break
-    fi
-done
+### 4. 🏆 Ranking Geral (`RankingScreen`)
+- Tabela interativa (`DataTable`) com ordenação automática dos melhores jogadores:
+  - Posição com pódio visual (🥇 1º, 🥈 2º, 🥉 3º).
+  - Nome do Jogador, Pontuação Acumulada, Vitórias, Total de Partidas, Taxa de Vitória (%) e Maior Sequência de Vitórias (*Best Streak*).
+
+### 🪟 Modais Contextuais
+- **Modal de Chute (`ChuteModal`):** Permite arriscar a palavra completa digitando o termo completo (`Ctrl+F`).
+- **Modal de Fim de Jogo (`GameOverModal`):** Apresenta vitória/derrota, palavra revelada, estatísticas da rodada, pontos obtidos (`+180 pts`) e ações de revanche rápida (`Replay` ou `Menu`).
+
+---
+
+## 🏗️ Arquitetura do Projeto
+
+```text
+forca_zipada/
+├── core/                         # Núcleo de Domínio e Lógica de Negócio
+│   ├── engine.py                 # Mecânica de sorteio de palavras e validação da forca
+│   ├── models.py                 # Dataclasses (Categoria, GameState)
+│   ├── normalizer.py             # Normalizador de strings e caracteres (NFKD)
+│   ├── orientation.py            # Detector de aspect ratio para layouts dinâmicos
+│   └── ranking_service.py        # Serviço de persistência JSON e cálculo de pontos
+├── controllers/                  # Controladores de Navegação e Foco
+│   ├── letter_buffer_controller.py  # Gerencia buffer de digitação e navegação 2-níveis
+│   └── menu_controller.py        # Navegação linear em menus e modais
+├── interfaces/                   # Contratos e Classes Base
+│   ├── base_screen.py            # BaseGameScreen (Screen com ciclo de vida customizado)
+│   ├── base_modal.py             # BaseGameModal (ModalScreen com navegação)
+│   └── controller.py             # Interface IController
+├── screens/                      # Telas da Aplicação com TCSS isolados
+│   ├── menu/                     # Menu Principal (screen.py, menu.tcss)
+│   ├── player_select/            # Seleção de Jogador (screen.py, player_select.tcss)
+│   ├── game/                     # Tela Principal da Partida (screen.py, game.tcss)
+│   ├── ranking/                  # Ranking / Leaderboard (screen.py, ranking.tcss)
+│   └── modals/                   # Modais (chute_modal, game_over_modal)
+├── styles/
+│   └── global.tcss               # Variáveis de cor e design tokens globais
+├── data/
+│   └── ranking.json              # Persistência de perfis e pontuações
+├── listas/                       # Dicionários de palavras por categoria
+├── forca_app.py                  # Ponto de entrada Textual (App Orchestrator)
+├── run.sh                        # Script de inicialização com auto-ativação de venv
+└── forca.sh                      # Versão legada original em Shell Script
 ```
 
-Ele faz o chamado de todas as funções e o jogo mesmo rola aqui, enquanto o player tem tentativas restantes o jogo rola. Provabelmente um switch case seria mais clean mas como eu ja tinha pré-definido para os breaks um numero pequeno de saidas eu fui de if aninnhado mesmo.
+---
 
-tem as saidas definidas nos ifs e elifs msa no processar chute também por exemplo, onde se o input for igual a palavra (input tratado com o | tr inclusive) valida e encerra a partida.
-se a função retorna a em `$?` tem um if para cada caso,  if para ! que chama o processa chute, um que derruba a sessão se for zero e outro que chama o processa tentativas e dentro dessa função direciona o acerto ou erro da letra em um array que vai para o placar. 
- 
-```
-processar_chute() {
-    read -p 'Digite a palavra completa: ' chute
-    chute=$(echo "$chute" | tr '[:upper:]' '[:lower:]')
-    if [[ "$chute" == "$palavra" ]]; then
-        desenhar_header "$tentativas_restantes" "$palavra" "${letras_certas[*]}" "${letras_erradas[*]}"
-        echo " Você acertou a palavra inteira!"
-        return 0
-    else
-        echo " Errou o chute! Fim de jogo."
-        return 1
-    fi
-}
+## 📊 Sistema de Pontuação e Ranking
+
+A pontuação de cada partida é calculada dinamicamente:
+* **Vitória:**
+  $$\text{Pontos} = 100 \text{ (base)} + (20 \times \text{tentativas restantes}) + \min(\text{streak} \times 10, 100)$$
+* **Derrota:**
+  $$\text{Pontos} = 10 \text{ (participação)}, \quad \text{streak} = 0$$
+
+Os dados ficam salvos em `data/ranking.json` e são carregados a cada inicialização.
+
+---
+
+## ⌨️ Controles e Navegação por Teclado
+
+| Ação | Teclas |
+| :--- | :--- |
+| **Digitar Letra** | Qualquer tecla `A-Z` ou `Ç` |
+| **Limpar Letra** | `Backspace` / `Delete` |
+| **Enviar Letra** | `Enter` (com o slot de letra focado) |
+| **Navegar Foco** | `↑` / `↓` / `←` / `→` |
+| **Chutar Palavra Toda** | `Ctrl + F` |
+| **Nova Palavra / Reiniciar** | `Ctrl + R` |
+| **Menu Principal** | `Ctrl + M` |
+| **Voltar (em telas/modais)** | `Esc` |
+| **Sair da Aplicação** | `Ctrl + Esc` ou `Ctrl + Q` |
+
+---
+
+## 🛠️ Como Executar
+
+### Pré-requisitos
+* Python 3.10 ou superior
+* Terminal com suporte a cores e UTF-8
+
+### Execução Direta via Launcher:
+```bash
+chmod +x run.sh
+./run.sh
 ```
 
-## For
-```
-gerar_progresso() {
-    local progresso=""
-    for letra in "${palavra_split[@]}"; do
-        if [[ " ${letras_certas[*]} " =~ " ${letra} " ]]; then
-            progresso+="$letra "
-        else
-            progresso+="_ "
-        fi
-    done
-    echo "$progresso"
-}
-```
+*(O script cria e ativa o ambiente virtual `.venv`, instala as dependências do `textual` se necessário e inicia o jogo).*
 
-aqui usei o for para atualizar o placar de letras la na header, ele faz a verificação que tem no if passar por todas as letras da palavra que dividimos.
+---
 
-# P5 
-Definir o que interfere no placar e como atualizar ele foi trabalhoso, de primeira eu iria chamar os processadores de tentativa e direcionar um return em cada para mandar direto para o placar, mas agrupar isso em uma unica função que verifica o status da palavra com o input direto foi melhor, eu tenho uma area menor para lidar, um array a mais apenas.
+## 📜 Histórico do Projeto Original (Bash)
+
+<details>
+<summary><b>Clique para expandir as notas do projeto acadêmico original (Sistemas Operacionais II - 2026)</b></summary>
+
+### Descrição Original
+O projeto inicial foi o desenvolvimento de um jogo CLI de forca em Bash, visando prática e aprofundamento no uso de Shell Script e terminal Linux.
+
+**Comandos e utilitários principais utilizados no script original:**
+* `$echo` e sequências ANSI de escape para formatação no terminal
+* `$RANDOM` para sorteio de palavras e índices
+* Laço `while` para o loop principal da sessão
+* `shopt -s globstar` para indexação recursiva de arquivos de palavras em `listas/`
+* `sed` e `tr` para tratamento de strings e remoção de acentuação
+
+**Estrutura de funções no Bash:**
+* `preset_jogo()`: Pré-carregamento do banco de palavras e sorteio
+* `desenhar_header()`: Renderização do estado do jogo no terminal
+* `gerar_progresso()`: Verificação de letras acertadas vs ocultas
+* `processar_tentativa()`: Validação e contabilização da letra digitada
+* `processar_chute()`: Modo *all-in* para adivinhar a palavra completa
+
+</details>
+
+---
+
+Desenvolvido por **Ryan Henrique Bezerra da Silva (Ryse)**.
