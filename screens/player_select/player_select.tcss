@@ -1,0 +1,77 @@
+/* Estilos da Tela de Seleção de Jogador */
+
+#player-select-container {
+    align: center middle;
+    width: 100%;
+    height: 100%;
+    background: $surface;
+    padding: 1 2;
+}
+
+#player-select-box {
+    width: 60;
+    max-width: 90%;
+    height: auto;
+    background: $panel;
+    border: heavy $primary;
+    padding: 1 2;
+    align: center middle;
+}
+
+#player-select-title {
+    text-align: center;
+    color: $accent;
+    text-style: bold;
+    margin-bottom: 1;
+}
+
+#player-select-subtitle {
+    text-align: center;
+    color: $text-muted;
+    margin-bottom: 1;
+}
+
+#input-player-name {
+    width: 100%;
+    margin: 1 0;
+    border: tall $secondary;
+    background: $boost;
+    color: $text;
+}
+
+#input-player-name:focus {
+    border: tall $accent;
+}
+
+#player-history-label {
+    text-align: left;
+    color: $text-muted;
+    margin-top: 1;
+    margin-bottom: 0;
+}
+
+#player-list {
+    width: 100%;
+    height: 6;
+    margin-bottom: 1;
+    border: round $primary-muted;
+    background: $boost;
+}
+
+#player-actions {
+    width: 100%;
+    height: 3;
+    layout: horizontal;
+    align: center middle;
+    margin-top: 1;
+}
+
+.player-btn {
+    width: 1fr;
+    height: 100%;
+    margin: 0 1;
+}
+
+.player-btn:focus {
+    text-style: bold;
+}

@@ -26,11 +26,12 @@ class MenuScreen(BaseGameScreen):
     CSS_PATH = Path(__file__).parent / "menu.tcss"
 
     BINDINGS = [
+        Binding("r", "abrir_ranking", "Ranking"),
         Binding("ctrl+escape", "sair", "Sair"),
         Binding("ctrl+q", "sair", "Sair"),
     ]
 
-    MENU_BUTTONS = ["btn-jogar", "btn-sair"]
+    MENU_BUTTONS = ["btn-jogar", "btn-ranking", "btn-sair"]
 
     ASCII_LOGO = """
  ███████╗ ██████╗ ██████╗  ██████╗ █████╗ 
@@ -52,6 +53,7 @@ class MenuScreen(BaseGameScreen):
 
             with Vertical(id="menu-buttons"):
                 yield Button("Iniciar Jogo [Enter]", id="btn-jogar", variant="success", classes="menu-btn")
+                yield Button("Ranking [R]", id="btn-ranking", variant="warning", classes="menu-btn")
                 yield Button("Sair do Jogo [Ctrl+Esc]", id="btn-sair", variant="error", classes="menu-btn")
 
         yield Footer()
@@ -88,6 +90,8 @@ class MenuScreen(BaseGameScreen):
         target_id = self.controller.get_current_target_id()
         if target_id == "btn-jogar":
             self.action_jogar()
+        elif target_id == "btn-ranking":
+            self.action_abrir_ranking()
         elif target_id == "btn-sair":
             self.action_sair()
 
@@ -100,9 +104,12 @@ class MenuScreen(BaseGameScreen):
             event.prevent_default()
 
     def action_jogar(self) -> None:
-        from screens.game.screen import GameScreen
-        app: ForcaApp = self.app  # type: ignore
-        self.app.push_screen(GameScreen(app.selected_category))
+        from screens.player_select.screen import SelectPlayerScreen
+        self.app.push_screen(SelectPlayerScreen())
+
+    def action_abrir_ranking(self) -> None:
+        from screens.ranking.screen import RankingScreen
+        self.app.push_screen(RankingScreen())
 
     def action_sair(self) -> None:
         self.app.exit()
@@ -110,5 +117,7 @@ class MenuScreen(BaseGameScreen):
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "btn-jogar":
             self.action_jogar()
+        elif event.button.id == "btn-ranking":
+            self.action_abrir_ranking()
         elif event.button.id == "btn-sair":
             self.action_sair()

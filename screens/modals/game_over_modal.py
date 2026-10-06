@@ -14,6 +14,7 @@ from textual.widgets import Button, Label, Static
 
 from controllers.menu_controller import MenuController
 from core.models import GameState
+from core.ranking_service import Player
 from interfaces.base_modal import BaseGameModal
 
 
@@ -31,9 +32,11 @@ class GameOverModal(BaseGameModal[str]):
 
     MODAL_BUTTONS = ["btn-replay", "btn-menu"]
 
-    def __init__(self, state: GameState):
+    def __init__(self, state: GameState, player: Optional[Player] = None, points_earned: int = 0):
         super().__init__()
         self.game_state = state
+        self.player = player
+        self.points_earned = points_earned
         self.controller = MenuController(self.MODAL_BUTTONS)
 
     def compose(self) -> ComposeResult:
@@ -45,7 +48,16 @@ class GameOverModal(BaseGameModal[str]):
             yield Label(titulo, classes=f"modal-title {classe_titulo}")
             yield Static(f"Palavra: [b]{self.game_state.palavra_original.upper()}[/b]\n", classes="modal-palavra")
             
+            player_info = ""
+            if self.player:
+                player_info = (
+                    f"• Jogador: [cyan]{self.player.name}[/cyan]\n"
+                    f"• Pontos da Rodada: [bold green]+{self.points_earned}[/bold green] (Total: {self.player.score})\n"
+                    f"• Sequência de Vitórias: [yellow]{self.player.current_streak}[/yellow]\n"
+                )
+
             stats_text = (
+                f"{player_info}"
                 f"• Tema: [yellow]{self.game_state.categoria_nome}[/yellow]\n"
                 f"• Letras Certas: [green]{len(self.game_state.letras_certas)}[/green]\n"
                 f"• Letras Erradas: [red]{len(self.game_state.letras_erradas)}[/red]\n"

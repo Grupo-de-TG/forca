@@ -1,0 +1,64 @@
+/* Estilos da Tela de Ranking */
+
+#ranking-container {
+    align: center middle;
+    width: 100%;
+    height: 100%;
+    background: $surface;
+    padding: 1 2;
+}
+
+#ranking-box {
+    width: 80;
+    max-width: 95%;
+    height: 80%;
+    background: $panel;
+    border: heavy $warning;
+    padding: 1 2;
+    align: center middle;
+}
+
+#ranking-title {
+    text-align: center;
+    color: $warning;
+    text-style: bold;
+    margin-bottom: 0;
+}
+
+#ranking-subtitle {
+    text-align: center;
+    color: $text-muted;
+    margin-bottom: 1;
+}
+
+#ranking-table {
+    width: 100%;
+    height: 1fr;
+    border: round $primary-muted;
+    background: $boost;
+    margin-bottom: 1;
+}
+
+#ranking-empty {
+    text-align: center;
+    color: $text-muted;
+    margin: 2 0;
+    text-style: italic;
+}
+
+#ranking-actions {
+    width: 100%;
+    height: 3;
+    layout: horizontal;
+    align: center middle;
+}
+
+.ranking-btn {
+    width: 50%;
+    height: 100%;
+    margin: 0 1;
+}
+
+.ranking-btn:focus {
+    text-style: bold;
+}
