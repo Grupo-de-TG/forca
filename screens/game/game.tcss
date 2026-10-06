@@ -150,12 +150,12 @@
     align: center top;
 }
 
+/* Linha minimalista e limpa: Letra: _ (Sem boxes) */
 #slot-letra-row {
     height: auto;
     width: 100%;
     align: center middle;
     margin: 1 0;
-    padding: 0 1;
 }
 
 #lbl-letra {
@@ -165,18 +165,11 @@
 }
 
 #slot-letra-candidata {
-    text-align: center;
-    text-style: bold;
+    text-style: bold underline;
     color: $warning;
-    background: $boost;
-    padding: 0 1;
-    min-width: 3;
-    border: solid $warning;
-}
-
-#legenda-curta {
-    color: $text-muted;
-    margin-left: 2;
+    background: transparent;
+    padding: 0;
+    margin: 0;
 }
 
 #status-mensagem {

@@ -1,6 +1,6 @@
 """
 Tela Principal do Jogo da Forca.
-100% Teclado Físico: Caixa com Tema + Palavra posicionada entre a View e a entrada de letras.
+100% Teclado Físico: Slot de letra minimalista centralizado sem caixas (apenas 'Letra: _').
 Layouts Dinâmicos Horizontal e Vertical orientados pela proporção 40/60.
 """
 
@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 class GameScreen(BaseGameScreen):
     """
     Tela principal da partida da Forca.
-    Tema e Palavra Secreta unificados em um box entre a View e o painel de inserção de letras.
+    Tema e Palavra Secreta no box central, e entrada simples 'Letra: _' centralizada.
     """
 
     CSS_PATH = Path(__file__).parent / "game.tcss"
@@ -66,10 +66,10 @@ class GameScreen(BaseGameScreen):
 
                 # Painel de Inserção de Letras, Status e Histórico
                 with Vertical(id="insert-letras-panel"):
+                    # Apenas o texto 'Letra: _' centralizado sem caixas
                     with Horizontal(id="slot-letra-row"):
                         yield Label("Letra: ", id="lbl-letra")
                         yield Static("_", id="slot-letra-candidata")
-                        yield Label("[Enter: Enviar | Backspace: Apagar]", id="legenda-curta")
 
                     yield Label(id="status-mensagem")
 
