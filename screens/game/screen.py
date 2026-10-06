@@ -1,7 +1,7 @@
 """
 Tela Principal do Jogo da Forca.
 100% Teclado Físico: Slot de letra selecionável/focável centralizado na linha com underline.
-Layouts Dinâmicos Horizontal e Vertical orientados pela proporção 40/60.
+Botões inferiores sem ícones dividindo a área proporcionalmente (1fr cada).
 """
 
 from __future__ import annotations
@@ -32,15 +32,15 @@ class GameScreen(BaseGameScreen):
     """
     Tela principal da partida da Forca.
     O slot de letra é centralizado na linha e focável: teclar Enter nele envia a letra.
-    Navegar para baixo foca os botões de ação (Chutar, Nova Palavra, Menu).
+    Navegar para baixo foca os botões de ação proporcionais (Chutar, Refresh, Menu).
     """
 
     CSS_PATH = Path(__file__).parent / "game.tcss"
 
     BINDINGS = [
         Binding("ctrl+m", "menu_principal", "Menu"),
-        Binding("ctrl+f", "chutar_tudo", "Chutar Palavra"),
-        Binding("ctrl+r", "reiniciar", "Nova Palavra"),
+        Binding("ctrl+f", "chutar_tudo", "Chutar"),
+        Binding("ctrl+r", "reiniciar", "Refresh"),
         Binding("ctrl+escape", "sair_jogo", "Sair"),
         Binding("ctrl+q", "sair_jogo", "Sair"),
     ]
@@ -81,10 +81,11 @@ class GameScreen(BaseGameScreen):
                         yield Label("Letras Certas: [green]-[/green]", id="letras-certas-box", classes="letras-label")
                         yield Label("Letras Erradas: [red]-[/red]", id="letras-erradas-box", classes="letras-label")
 
+        # Barra inferior com 3 botões proporcionais (1fr cada) e texto limpo
         with Horizontal(id="game-actions"):
-            yield Button("🎯 Chutar Palavra [Ctrl+F]", id="btn-chutar", variant="warning", classes="action-btn")
-            yield Button("🔄 Nova Palavra [Ctrl+R]", id="btn-nova-palavra", variant="primary", classes="action-btn")
-            yield Button("🏠 Menu [Ctrl+M]", id="btn-voltar-menu", variant="default", classes="action-btn")
+            yield Button("Chutar [Ctrl+F]", id="btn-chutar", variant="warning", classes="action-btn")
+            yield Button("Refresh [Ctrl+R]", id="btn-nova-palavra", variant="primary", classes="action-btn")
+            yield Button("Menu [Ctrl+M]", id="btn-voltar-menu", variant="default", classes="action-btn")
 
         yield Footer()
 

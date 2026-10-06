@@ -211,18 +211,22 @@ LetterSlot:focus {
     color: $error;
 }
 
-/* Barra de Ações Inferior */
+/* Barra de Ações Inferior - 3 botões dividindo a área igualmente (1fr cada) */
 #game-actions {
     dock: bottom;
     height: 3;
     width: 100%;
     background: $boost;
+    layout: horizontal;
     align: center middle;
     padding: 0 1;
 }
 
 .action-btn {
+    width: 1fr;
+    height: 100%;
     margin: 0 1;
+    text-align: center;
 }
 
 .action-btn:focus {
