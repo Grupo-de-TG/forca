@@ -8,75 +8,11 @@ from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
 from core.database import DatabaseManager
+from core.models import Player, MatchRecord
+from interfaces.player_repository import IPlayerRepository
 
 
-@dataclass
-class Player:
-    id: int
-    name: str
-    score: int = 0
-    partidas: int = 0
-    vitorias: int = 0
-    streak_atual: int = 0
-    best_streak: int = 0
-
-    @property
-    def games_played(self) -> int:
-        return self.partidas
-
-    @property
-    def games_won(self) -> int:
-        return self.vitorias
-
-    @property
-    def current_streak(self) -> int:
-        return self.streak_atual
-
-    @property
-    def win_rate(self) -> float:
-        if self.partidas == 0:
-            return 0.0
-        return (self.vitorias / self.partidas) * 100.0
-
-
-@dataclass
-class MatchRecord:
-    id: int
-    user_id: int
-    username: str
-    vencidas: bool
-    categoria: str
-    palavra: str
-    tentativas_restantes: int
-    pontos: int
-    marca_paco: str
-
-    @property
-    def won(self) -> bool:
-        return self.vencidas
-
-    @property
-    def category_name(self) -> str:
-        return self.categoria
-
-    @property
-    def word(self) -> str:
-        return self.palavra
-
-    @property
-    def attempts_left(self) -> int:
-        return self.tentativas_restantes
-
-    @property
-    def points_earned(self) -> int:
-        return self.pontos
-
-    @property
-    def played_at(self) -> str:
-        return self.marca_paco
-
-
-class RankingService:
+class RankingService(IPlayerRepository):
     """Gerencia regras de pontuação, tabela de classificação e histórico de partidas em SQL."""
 
     def __init__(self, db: DatabaseManager):
@@ -166,6 +102,47 @@ class RankingService:
                     best_streak=row["best_streak"],
                 )
             return None
+    def get_player(self, name: str) -> Optional[Player]:
+        """Alias para get_player_by_name."""
+        return self.get_player_by_name(name)
+
+    def get_or_create_player(self, name: str) -> Player:
+        """Obtém um jogador existente ou cria um novo perfil e suas estatísticas."""
+        clean_name = name.strip() or "Jogador"
+        existing = self.get_player_by_name(clean_name)
+        if existing:
+            return existing
+
+        with self.db.transaction() as conn:
+            conn.execute(
+                "INSERT OR IGNORE INTO users (username, password) VALUES (?, ?);",
+                (clean_name, ""),
+            )
+            u_cur = conn.execute("SELECT id FROM users WHERE username = ? COLLATE NOCASE;", (clean_name,))
+            user_id = u_cur.fetchone()["id"]
+            conn.execute(
+                "INSERT OR IGNORE INTO player_stats (user_id, score, partidas, vitorias, streak_atual, best_streak) VALUES (?, 0, 0, 0, 0, 0);",
+                (user_id,),
+            )
+            return Player(id=user_id, name=clean_name)
+
+    def record_game_result(
+        self,
+        player_name: str,
+        won: bool,
+        attempts_left: int = 0,
+        category_name: str = "Geral",
+        word: str = "",
+    ) -> Tuple[Player, int]:
+        """Implementação da interface IPlayerRepository para registrar resultado por nome."""
+        player = self.get_or_create_player(player_name)
+        return self.record_match(
+            user_id=player.id,
+            won=won,
+            category_name=category_name,
+            word=word,
+            attempts_left=attempts_left,
+        )
 
     def record_match(
         self,

@@ -1,5 +1,6 @@
 """
 Mecanismo central de regras de negócio do Jogo da Forca.
+Consome o IWordRepository desacoplado (Neo4j ou File fallback).
 """
 
 from __future__ import annotations
@@ -7,8 +8,11 @@ import random
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-from core.models import Categoria, GameState
+from interfaces.word_repository import IWordRepository
+from core.models import Categoria, GameState, WordData
 from core.normalizer import normalizar_texto
+from core.neo4j_word_repository import Neo4jWordRepository
+from core.file_word_repository import FileWordRepository
 
 
 class ForcaEngine:
@@ -87,44 +91,32 @@ class ForcaEngine:
         """
     ]
 
-    def __init__(self, base_dir: Optional[Path] = None):
+    def __init__(self, word_repo: Optional[IWordRepository] = None, base_dir: Optional[Path] = None):
         if base_dir is None:
             base_dir = Path(__file__).parent.parent
-        self.listas_dir = base_dir / "listas"
-        self.categorias: List[Categoria] = []
-        self.carregar_categorias()
+        self.base_dir = base_dir
 
-    def carregar_categorias(self) -> None:
-        """Descobre todos os arquivos txt disponíveis na pasta listas/."""
-        self.categorias.clear()
-        if not self.listas_dir.exists():
-            return
+        if word_repo is None:
+            # Auto-descoberta: se Neo4j estiver online usa grafo, senão fallback para arquivos .txt locais
+            neo_repo = Neo4jWordRepository()
+            if neo_repo.is_available() and len(neo_repo.list_themes()) > 0:
+                self.word_repo: IWordRepository = neo_repo
+            else:
+                self.word_repo = FileWordRepository(self.base_dir)
+        else:
+            self.word_repo = word_repo
 
-        for f in sorted(self.listas_dir.glob("**/*.txt")):
-            try:
-                with open(f, "r", encoding="utf-8", errors="ignore") as file:
-                    linhas = [l.strip() for l in file if l.strip()]
-                    nome_formatado = f.stem.replace("-", " ").replace("_", " ").title()
-                    self.categorias.append(Categoria(nome=nome_formatado, arquivo_path=f, total_palavras=len(linhas)))
-            except Exception:
-                pass
+    @property
+    def categorias(self) -> List[Categoria]:
+        return self.word_repo.list_themes()
 
     def sortear_palavra(self, categoria: Optional[Categoria] = None) -> Tuple[str, str, str]:
         """Retorna (categoria_nome, palavra_original, palavra_normalizada)."""
-        if not self.categorias:
-            return ("Geral", "computador", "computador")
-
-        cat_escolhida = categoria if categoria else random.choice(self.categorias)
-
-        with open(cat_escolhida.arquivo_path, "r", encoding="utf-8", errors="ignore") as f:
-            linhas = [l.strip() for l in f if l.strip()]
-
-        if not linhas:
-            return (cat_escolhida.nome, "terminal", "terminal")
-
-        palavra_original = random.choice(linhas)
-        palavra_norm = normalizar_texto(palavra_original)
-        return (cat_escolhida.nome, palavra_original, palavra_norm)
+        theme_id = categoria.id if categoria else None
+        word_data = self.word_repo.get_random_word(theme_id=theme_id)
+        if word_data:
+            return (word_data.theme_name, word_data.text, word_data.normalized)
+        return ("Geral", "computador", "computador")
 
     def novo_jogo(self, categoria: Optional[Categoria] = None) -> GameState:
         cat_nome, original, norm = self.sortear_palavra(categoria)
@@ -135,7 +127,7 @@ class ForcaEngine:
             tentativas_restantes=6,
             letras_certas=[],
             letras_erradas=[],
-            mensagem="Bora começar! Navegue com as setas ou digite uma letra e tecle Enter.",
+            mensagem="Bora começar! Digite uma letra no teclado e tecle Enter.",
         )
 
     def processar_tentativa(self, state: GameState, tentativa: str) -> Tuple[GameState, str]:
@@ -148,8 +140,8 @@ class ForcaEngine:
 
         tentativa = normalizar_texto(tentativa)
 
-        if len(tentativa) != 1 or not tentativa.isalpha():
-            state.mensagem = "Digite apenas uma letra válida (A-Z)."
+        if len(tentativa) != 1 or not (tentativa.isalpha() or tentativa == "ç"):
+            state.mensagem = "Digite apenas uma letra válida (A-Z ou Ç)."
             return state, "invalido"
 
         if tentativa in state.todas_tentativas:
