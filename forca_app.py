@@ -10,6 +10,8 @@ from typing import Optional
 from textual.app import App
 from textual.binding import Binding
 
+from core.database import DatabaseManager
+from core.auth_service import AuthService, User
 from core.engine import ForcaEngine
 from core.models import Categoria
 from core.ranking_service import Player, RankingService
@@ -28,12 +30,16 @@ class ForcaApp(App):
         Binding("ctrl+q", "quit_app", "Sair"),
     ]
 
-    def __init__(self):
+    def __init__(self, db_path: Optional[Path] = None):
         super().__init__()
         self.engine = ForcaEngine(Path(__file__).parent)
-        self.ranking_service = RankingService()
+        self.db = DatabaseManager(db_path)
+        self.auth_service = AuthService(self.db)
+        self.ranking_service = RankingService(self.db)
         self.selected_category: Optional[Categoria] = None
+        self.current_user: Optional[User] = None
         self.current_player: Optional[Player] = None
+
 
     def on_mount(self) -> None:
         self.push_screen(MenuScreen())

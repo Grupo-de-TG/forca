@@ -1,42 +1,19 @@
 """
-Serviço de Gerenciamento de Jogadores e Ranking com persistência JSON e Autenticação.
+Serviço Dedicado de Pontuação, Ranking e Histórico de Partidas (RankingService).
+Persistência relacional em SQL das estatísticas acumuladas e partidas individuais.
 """
 
 from __future__ import annotations
-from dataclasses import dataclass, asdict
-from pathlib import Path
-import json
-import hashlib
-import secrets
-from typing import List, Optional, Dict, Tuple
+from dataclasses import dataclass
+from typing import List, Optional, Tuple
 
-
-def hash_password(password: str, salt: str = "") -> Tuple[str, str]:
-    """Gera hash PBKDF2-HMAC-SHA256 seguro com salt."""
-    if not salt:
-        salt = secrets.token_hex(16)
-    hashed = hashlib.pbkdf2_hmac(
-        "sha256",
-        password.encode("utf-8"),
-        salt.encode("utf-8"),
-        100000,
-    ).hex()
-    return hashed, salt
-
-
-def verify_password(password: str, hashed: str, salt: str) -> bool:
-    """Verifica se a senha fornecida confere com o hash e salt usando tempo constante."""
-    if not hashed or not salt:
-        return False
-    new_hash, _ = hash_password(password, salt)
-    return secrets.compare_digest(new_hash, hashed)
+from core.database import DatabaseManager
 
 
 @dataclass
 class Player:
+    id: int
     name: str
-    password_hash: str = ""
-    password_salt: str = ""
     score: int = 0
     games_played: int = 0
     games_won: int = 0
@@ -44,186 +21,236 @@ class Player:
     best_streak: int = 0
 
     @property
-    def has_password(self) -> bool:
-        return bool(self.password_hash and self.password_salt)
-
-    @property
     def win_rate(self) -> float:
         if self.games_played == 0:
             return 0.0
         return (self.games_won / self.games_played) * 100.0
 
-    def to_dict(self) -> dict:
-        return asdict(self)
 
-    @classmethod
-    def from_dict(cls, data: dict) -> Player:
-        return cls(
-            name=data.get("name", "Anônimo"),
-            password_hash=data.get("password_hash", ""),
-            password_salt=data.get("password_salt", ""),
-            score=data.get("score", 0),
-            games_played=data.get("games_played", 0),
-            games_won=data.get("games_won", 0),
-            current_streak=data.get("current_streak", 0),
-            best_streak=data.get("best_streak", 0),
-        )
+@dataclass
+class MatchRecord:
+    id: int
+    user_id: int
+    username: str
+    won: bool
+    category_name: str
+    word: str
+    attempts_left: int
+    points_earned: int
+    played_at: str
 
 
 class RankingService:
-    """Gerencia leitura, escrita, autenticação e pontuação de jogadores."""
+    """Gerencia regras de pontuação, tabela de classificação e histórico de partidas em SQL."""
 
-    def __init__(self, data_file: Path | None = None):
-        if data_file is None:
-            self.data_file = Path(__file__).parent.parent / "data" / "ranking.json"
-        else:
-            self.data_file = data_file
-        self._ensure_storage()
-
-    def _ensure_storage(self) -> None:
-        if not self.data_file.parent.exists():
-            self.data_file.parent.mkdir(parents=True, exist_ok=True)
-        if not self.data_file.exists():
-            self.data_file.write_text("{}", encoding="utf-8")
-
-    def _load_data(self) -> Dict[str, dict]:
-        try:
-            content = self.data_file.read_text(encoding="utf-8")
-            return json.loads(content) if content.strip() else {}
-        except Exception:
-            return {}
-
-    def _save_data(self, data: Dict[str, dict]) -> None:
-        self.data_file.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
-
-    def get_all_players(self) -> List[Player]:
-        data = self._load_data()
-        players = [Player.from_dict(p_data) for p_data in data.values()]
-        # Ordena por maior pontuação, depois mais vitórias, depois melhor streak
-        players.sort(key=lambda p: (p.score, p.games_won, p.best_streak), reverse=True)
-        return players
-
-    def player_exists(self, name: str) -> bool:
-        clean_name = name.strip()
-        if not clean_name:
-            return False
-        data = self._load_data()
-        return clean_name.lower() in data
-
-    def get_player(self, name: str) -> Optional[Player]:
-        clean_name = name.strip()
-        data = self._load_data()
-        key = clean_name.lower()
-        if key in data:
-            return Player.from_dict(data[key])
-        return None
-
-    def verify_or_register_player(self, name: str, password: str) -> Tuple[bool, str, Optional[Player]]:
-        """
-        Verifica a senha de um jogador existente ou cadastra um novo jogador com a senha informada.
-        Retorna (sucesso, mensagem, player).
-        """
-        clean_name = name.strip()
-        if not clean_name:
-            return False, "O nome do jogador não pode ser vazio.", None
-
-        if not password:
-            return False, "A senha não pode ser vazia.", None
-
-        data = self._load_data()
-        key = clean_name.lower()
-
-        if key in data:
-            player = Player.from_dict(data[key])
-            if not player.has_password:
-                # Perfil herdado sem senha: cadastra a nova senha
-                pwd_hash, pwd_salt = hash_password(password)
-                player.password_hash = pwd_hash
-                player.password_salt = pwd_salt
-                data[key] = player.to_dict()
-                self._save_data(data)
-                return True, f"Senha registrada para o jogador existente '{player.name}'!", player
-
-            # Valida senha existente
-            if verify_password(password, player.password_hash, player.password_salt):
-                return True, f"Autenticado com sucesso como '{player.name}'!", player
-            else:
-                return False, f"Senha incorreta para o jogador '{player.name}'.", None
-
-        # Novo jogador
-        pwd_hash, pwd_salt = hash_password(password)
-        new_player = Player(
-            name=clean_name,
-            password_hash=pwd_hash,
-            password_salt=pwd_salt,
-        )
-        data[key] = new_player.to_dict()
-        self._save_data(data)
-        return True, f"Novo jogador '{new_player.name}' cadastrado com sucesso!", new_player
-
-    def reset_password(self, name: str, new_password: str) -> Tuple[bool, str, Optional[Player]]:
-        """Redefine a senha de um jogador existente com novo salt e hash."""
-        clean_name = name.strip()
-        if not clean_name:
-            return False, "O nome do jogador não pode ser vazio.", None
-        if not new_password:
-            return False, "A nova senha não pode ser vazia.", None
-
-        data = self._load_data()
-        key = clean_name.lower()
-        if key not in data:
-            return False, f"Jogador '{clean_name}' não encontrado no ranking.", None
-
-        player = Player.from_dict(data[key])
-        pwd_hash, pwd_salt = hash_password(new_password)
-        player.password_hash = pwd_hash
-        player.password_salt = pwd_salt
-        data[key] = player.to_dict()
-        self._save_data(data)
-        return True, f"Senha do jogador '{player.name}' redefinida com sucesso!", player
-
+    def __init__(self, db: DatabaseManager):
+        self.db = db
 
     @staticmethod
     def calculate_match_points(won: bool, attempts_left: int = 0, current_streak: int = 0) -> int:
-        """Calcula os pontos potenciais de uma partida."""
+        """
+        Calcula os pontos obtidos em uma rodada:
+        Vitória: 100 base + (20 * vidas restantes) + bônus de sequência (máx 100).
+        Derrota: 10 pontos de participação.
+        """
         if won:
             next_streak = current_streak + 1
             streak_bonus = min(next_streak * 10, 100)
             return 100 + (attempts_left * 20) + streak_bonus
         return 10
 
-    def record_game_for_player(self, player: Player, won: bool, attempts_left: int = 0) -> Tuple[Player, int]:
+    def get_all_players(self) -> List[Player]:
+        """Retorna todos os jogadores ordenados por pontuação, vitórias e streak."""
+        with self.db.transaction() as conn:
+            cursor = conn.execute("""
+                SELECT u.id, u.username, s.score, s.games_played, s.games_won, s.current_streak, s.best_streak
+                FROM users u
+                INNER JOIN player_stats s ON u.id = s.user_id
+                ORDER BY s.score DESC, s.games_won DESC, s.best_streak DESC;
+            """)
+            players = []
+            for row in cursor.fetchall():
+                players.append(
+                    Player(
+                        id=row["id"],
+                        name=row["username"],
+                        score=row["score"],
+                        games_played=row["games_played"],
+                        games_won=row["games_won"],
+                        current_streak=row["current_streak"],
+                        best_streak=row["best_streak"],
+                    )
+                )
+            return players
+
+    def get_player_by_id(self, user_id: int) -> Optional[Player]:
+        """Obtém as estatísticas de um jogador por ID de usuário."""
+        with self.db.transaction() as conn:
+            cursor = conn.execute("""
+                SELECT u.id, u.username, s.score, s.games_played, s.games_won, s.current_streak, s.best_streak
+                FROM users u
+                INNER JOIN player_stats s ON u.id = s.user_id
+                WHERE u.id = ?;
+            """, (user_id,))
+            row = cursor.fetchone()
+            if row:
+                return Player(
+                    id=row["id"],
+                    name=row["username"],
+                    score=row["score"],
+                    games_played=row["games_played"],
+                    games_won=row["games_won"],
+                    current_streak=row["current_streak"],
+                    best_streak=row["best_streak"],
+                )
+            return None
+
+    def get_player_by_name(self, username: str) -> Optional[Player]:
+        """Obtém as estatísticas de um jogador por nome."""
+        clean_name = username.strip()
+        if not clean_name:
+            return None
+
+        with self.db.transaction() as conn:
+            cursor = conn.execute("""
+                SELECT u.id, u.username, s.score, s.games_played, s.games_won, s.current_streak, s.best_streak
+                FROM users u
+                INNER JOIN player_stats s ON u.id = s.user_id
+                WHERE u.username = ? COLLATE NOCASE;
+            """, (clean_name,))
+            row = cursor.fetchone()
+            if row:
+                return Player(
+                    id=row["id"],
+                    name=row["username"],
+                    score=row["score"],
+                    games_played=row["games_played"],
+                    games_won=row["games_won"],
+                    current_streak=row["current_streak"],
+                    best_streak=row["best_streak"],
+                )
+            return None
+
+    def record_match(
+        self,
+        user_id: int,
+        won: bool,
+        category_name: str,
+        word: str,
+        attempts_left: int = 0,
+    ) -> Tuple[Player, int]:
         """
-        Registra o resultado da partida para a instância do Player autenticado.
+        Registra atomicamente a partida no histórico (matches) e atualiza o ranking (player_stats).
+        Retorna (Player atualizado, pontos ganhos na rodada).
         """
-        player.games_played += 1
+        with self.db.transaction() as conn:
+            # 1. Carrega dados atuais do jogador
+            cursor = conn.execute(
+                "SELECT score, games_played, games_won, current_streak, best_streak FROM player_stats WHERE user_id = ?;",
+                (user_id,),
+            )
+            row = cursor.fetchone()
+            if not row:
+                raise ValueError(f"Estatísticas não encontradas para o user_id {user_id}")
 
-        points_earned = 0
-        if won:
-            player.games_won += 1
-            player.current_streak += 1
-            if player.current_streak > player.best_streak:
-                player.best_streak = player.current_streak
+            score = row["score"]
+            games_played = row["games_played"] + 1
+            games_won = row["games_won"]
+            current_streak = row["current_streak"]
+            best_streak = row["best_streak"]
 
-            streak_bonus = min(player.current_streak * 10, 100)
-            points_earned = 100 + (attempts_left * 20) + streak_bonus
-            player.score += points_earned
-        else:
-            player.current_streak = 0
-            points_earned = 10
-            player.score += points_earned
+            points_earned = self.calculate_match_points(won, attempts_left, current_streak)
+            score += points_earned
 
-        data = self._load_data()
-        data[player.name.lower()] = player.to_dict()
-        self._save_data(data)
+            if won:
+                games_won += 1
+                current_streak += 1
+                if current_streak > best_streak:
+                    best_streak = current_streak
+            else:
+                current_streak = 0
 
-        return player, points_earned
+            # 2. Atualiza tabela agregada player_stats
+            conn.execute("""
+                UPDATE player_stats
+                SET score = ?, games_played = ?, games_won = ?, current_streak = ?, best_streak = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE user_id = ?;
+            """, (score, games_played, games_won, current_streak, best_streak, user_id))
 
-    def record_game_result(self, player_name: str, won: bool, attempts_left: int = 0) -> tuple[Player, int]:
-        """Método de compatibilidade legado."""
-        clean_name = player_name.strip() or "Jogador"
-        player = self.get_player(clean_name)
-        if not player:
-            player = Player(name=clean_name)
-        return self.record_game_for_player(player, won, attempts_left)
+            # 3. Insere registro individual no histórico de partidas (matches)
+            conn.execute("""
+                INSERT INTO matches (user_id, won, category_name, word, attempts_left, points_earned)
+                VALUES (?, ?, ?, ?, ?, ?);
+            """, (user_id, 1 if won else 0, category_name, word, attempts_left, points_earned))
+
+            # 4. Obtém nome do usuário
+            u_cur = conn.execute("SELECT username FROM users WHERE id = ?;", (user_id,))
+            u_row = u_cur.fetchone()
+            username = u_row["username"] if u_row else "Jogador"
+
+            player = Player(
+                id=user_id,
+                name=username,
+                score=score,
+                games_played=games_played,
+                games_won=games_won,
+                current_streak=current_streak,
+                best_streak=best_streak,
+            )
+            return player, points_earned
+
+    def get_player_match_history(self, user_id: int, limit: int = 20) -> List[MatchRecord]:
+        """Obtém o histórico de partidas de um jogador específico."""
+        with self.db.transaction() as conn:
+            cursor = conn.execute("""
+                SELECT m.id, m.user_id, u.username, m.won, m.category_name, m.word, m.attempts_left, m.points_earned, m.played_at
+                FROM matches m
+                INNER JOIN users u ON m.user_id = u.id
+                WHERE m.user_id = ?
+                ORDER BY m.id DESC
+                LIMIT ?;
+            """, (user_id, limit))
+            records = []
+            for row in cursor.fetchall():
+                records.append(
+                    MatchRecord(
+                        id=row["id"],
+                        user_id=row["user_id"],
+                        username=row["username"],
+                        won=bool(row["won"]),
+                        category_name=row["category_name"],
+                        word=row["word"],
+                        attempts_left=row["attempts_left"],
+                        points_earned=row["points_earned"],
+                        played_at=str(row["played_at"]),
+                    )
+                )
+            return records
+
+    def get_recent_matches(self, limit: int = 50) -> List[MatchRecord]:
+        """Obtém o histórico global recente de todas as partidas."""
+        with self.db.transaction() as conn:
+            cursor = conn.execute("""
+                SELECT m.id, m.user_id, u.username, m.won, m.category_name, m.word, m.attempts_left, m.points_earned, m.played_at
+                FROM matches m
+                INNER JOIN users u ON m.user_id = u.id
+                ORDER BY m.id DESC
+                LIMIT ?;
+            """, (limit,))
+            records = []
+            for row in cursor.fetchall():
+                records.append(
+                    MatchRecord(
+                        id=row["id"],
+                        user_id=row["user_id"],
+                        username=row["username"],
+                        won=bool(row["won"]),
+                        category_name=row["category_name"],
+                        word=row["word"],
+                        attempts_left=row["attempts_left"],
+                        points_earned=row["points_earned"],
+                        played_at=str(row["played_at"]),
+                    )
+                )
+            return records
 

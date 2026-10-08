@@ -147,11 +147,12 @@ class ResetPasswordModal(BaseGameModal[Optional[str]]):
             return
 
         app: ForcaApp = self.app  # type: ignore
-        sucesso, msg, player = app.ranking_service.reset_password(nome, pwd1)
+        sucesso, msg, user = app.auth_service.reset_password(nome, pwd1)
 
-        if not sucesso or not player:
+        if not sucesso or not user:
             status.update(f"[bold red]❌ {msg}[/bold red]")
             return
+
 
         self.dismiss(pwd1)
 

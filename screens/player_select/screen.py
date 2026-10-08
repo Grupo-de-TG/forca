@@ -148,7 +148,7 @@ class SelectPlayerScreen(BaseGameModal[str]):
             return
 
         app: ForcaApp = self.app  # type: ignore
-        if app.ranking_service.player_exists(clean_nome):
+        if app.auth_service.user_exists(clean_nome):
             status_widget.update(f"[yellow]ℹ️ Jogador '{clean_nome}' cadastrado. Digite sua senha para assinar.[/yellow]")
         else:
             status_widget.update(f"[cyan]✨ Novo jogador '{clean_nome}' detectado! Defina sua senha para registrar.[/cyan]")
@@ -282,28 +282,36 @@ class SelectPlayerScreen(BaseGameModal[str]):
             return
 
         app: ForcaApp = self.app  # type: ignore
-        sucesso, msg, player = app.ranking_service.verify_or_register_player(nome, senha)
+        # 1. Autentica ou Registra via AuthService
+        sucesso, msg, user = app.auth_service.verify_or_register_user(nome, senha)
 
-        if not sucesso or not player:
+        if not sucesso or not user:
             status_widget.update(f"[bold red]❌ {msg}[/bold red]")
             input_pwd.value = ""
             input_pwd.focus()
             return
 
-        # Autenticado com sucesso
-        app.current_player = player
+        # 2. Registra o resultado da partida e atualiza estatísticas via RankingService
+        app.current_user = user
         if self.game_state:
-            player, self.points_earned = app.ranking_service.record_game_for_player(
-                player,
+            player, self.points_earned = app.ranking_service.record_match(
+                user_id=user.id,
                 won=self.game_state.venceu,
+                category_name=self.game_state.categoria_nome,
+                word=self.game_state.palavra_original,
                 attempts_left=self.game_state.tentativas_restantes,
             )
             app.current_player = player
+        else:
+            player = app.ranking_service.get_player_by_id(user.id)
+            app.current_player = player
 
         self.signed = True
+        score_val = player.score if player else 0
+        streak_val = player.current_streak if player else 0
         status_widget.update(
             f"[bold green]✅ Partida assinada com sucesso! Pontos ganhos: +{self.points_earned} | "
-            f"Score Total: {player.score} pts (Sequência: {player.current_streak})[/bold green]"
+            f"Score Total: {score_val} pts (Sequência: {streak_val})[/bold green]"
         )
         self.carregar_jogadores()
         self.query_one("#btn-replay", Button).focus()
@@ -326,6 +334,7 @@ class SelectPlayerScreen(BaseGameModal[str]):
         """Pula a assinatura da partida descartando o resultado."""
         if not self.signed:
             app: ForcaApp = self.app  # type: ignore
+            app.current_user = None
             app.current_player = None
         self.dismiss("replay")
 
@@ -333,6 +342,7 @@ class SelectPlayerScreen(BaseGameModal[str]):
         """Reinicia uma nova partida."""
         if not self.signed:
             app: ForcaApp = self.app  # type: ignore
+            app.current_user = None
             app.current_player = None
         self.dismiss("replay")
 
@@ -340,10 +350,12 @@ class SelectPlayerScreen(BaseGameModal[str]):
         """Retorna ao menu principal."""
         if not self.signed:
             app: ForcaApp = self.app  # type: ignore
+            app.current_user = None
             app.current_player = None
         self.dismiss("menu")
 
     def action_sair_jogo(self) -> None:
         self.app.exit()
+
 
 

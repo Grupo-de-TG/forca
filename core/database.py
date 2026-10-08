@@ -1,0 +1,96 @@
+"""
+Gerenciador de Banco de Dados SQL (SQLite) para o Jogo da Forca.
+Fornece esquema relacional com chaves estrangeiras, índices e suporte a transações.
+"""
+
+from __future__ import annotations
+import sqlite3
+from pathlib import Path
+from typing import Optional
+from contextlib import contextmanager
+
+
+class DatabaseManager:
+    """Gerencia conexões e esquema do banco de dados SQLite."""
+
+    def __init__(self, db_path: Optional[Path] = None):
+        if db_path is None:
+            self.db_path = Path(__file__).parent.parent / "data" / "forca.db"
+        else:
+            self.db_path = db_path
+
+        self._ensure_storage()
+        self.init_schema()
+
+    def _ensure_storage(self) -> None:
+        if not self.db_path.parent.exists():
+            self.db_path.parent.mkdir(parents=True, exist_ok=True)
+
+    def get_connection(self) -> sqlite3.Connection:
+        """Retorna conexão SQLite configurada com foreign keys e Row factory."""
+        conn = sqlite3.connect(str(self.db_path))
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA foreign_keys = ON;")
+        conn.execute("PRAGMA journal_mode = WAL;")
+        return conn
+
+    @contextmanager
+    def transaction(self):
+        """Context manager para operações atômicas com commit/rollback automático."""
+        conn = self.get_connection()
+        try:
+            yield conn
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
+
+    def init_schema(self) -> None:
+        """Cria as tabelas e índices se não existirem."""
+        with self.transaction() as conn:
+            # 1. Tabela de Usuários e Autenticação
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username TEXT UNIQUE NOT NULL COLLATE NOCASE,
+                    password_hash TEXT NOT NULL,
+                    password_salt TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+            """)
+
+            # 2. Tabela de Estatísticas e Ranking dos Jogadores
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS player_stats (
+                    user_id INTEGER PRIMARY KEY,
+                    score INTEGER NOT NULL DEFAULT 0,
+                    games_played INTEGER NOT NULL DEFAULT 0,
+                    games_won INTEGER NOT NULL DEFAULT 0,
+                    current_streak INTEGER NOT NULL DEFAULT 0,
+                    best_streak INTEGER NOT NULL DEFAULT 0,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                );
+            """)
+
+            # 3. Tabela de Histórico de Partidas
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS matches (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    won INTEGER NOT NULL,
+                    category_name TEXT NOT NULL,
+                    word TEXT NOT NULL,
+                    attempts_left INTEGER NOT NULL,
+                    points_earned INTEGER NOT NULL,
+                    played_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                );
+            """)
+
+            # Índices para performance em buscas e ordenação
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_stats_score ON player_stats(score DESC, games_won DESC);")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_matches_user ON matches(user_id, played_at DESC);")
