@@ -112,11 +112,18 @@ class ForcaEngine:
 
     def sortear_palavra(self, categoria: Optional[Categoria] = None) -> Tuple[str, str, str]:
         """Retorna (categoria_nome, palavra_original, palavra_normalizada)."""
-        theme_id = categoria.id if categoria else None
-        word_data = self.word_repo.get_random_word(theme_id=theme_id)
+        categorias_disponiveis = self.categorias
+        if not categorias_disponiveis:
+            return ("Geral", "computador", "computador")
+
+        # 1. O Python sorteia a categoria caso nenhuma tenha sido selecionada:
+        cat_escolhida = categoria if categoria else random.choice(categorias_disponiveis)
+
+        # 2. Pede a palavra da categoria ao repositório:
+        word_data = self.word_repo.get_random_word(theme_id=cat_escolhida.id)
         if word_data:
             return (word_data.theme_name, word_data.text, word_data.normalized)
-        return ("Geral", "computador", "computador")
+        return (cat_escolhida.nome, "computador", "computador")
 
     def novo_jogo(self, categoria: Optional[Categoria] = None) -> GameState:
         cat_nome, original, norm = self.sortear_palavra(categoria)

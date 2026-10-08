@@ -1,6 +1,6 @@
 """
 Implementação do repositório de palavras utilizando o Neo4j Graph Database.
-Suporta consultas taxonômicas hierárquicas (temas raiz e subtemas).
+Retorna as categorias jogáveis e sorteia palavras por tema especificado.
 """
 
 from __future__ import annotations
@@ -39,12 +39,10 @@ class Neo4jWordRepository(IWordRepository):
             return False
 
     def list_themes(self) -> List[Categoria]:
-        """Consulta todos os nós (:Theme) presentes no grafo calculando palavras diretas ou via subtemas."""
+        """Consulta todos os temas que possuem palavras associadas diretamente no grafo."""
         query = """
-        MATCH (t:Theme)
-        OPTIONAL MATCH (w:Word)-[:BELONGS_TO]->(sub:Theme)
-        WHERE sub = t OR (sub)-[:SUBTHEME_OF*1..2]->(t)
-        RETURN t.id AS id, t.name AS name, coalesce(t.group, 'Geral') AS group, count(DISTINCT w) AS total_words
+        MATCH (t:Theme)<-[:BELONGS_TO]-(w:Word)
+        RETURN t.id AS id, t.name AS name, coalesce(t.group, 'Geral') AS group, count(w) AS total_words
         ORDER BY t.name
         """
         categorias = []
@@ -68,16 +66,14 @@ class Neo4jWordRepository(IWordRepository):
         exclude_words: Optional[List[str]] = None
     ) -> Optional[WordData]:
         """
-        Sorteia uma palavra do grafo Neo4j para o tema selecionado
-        (incluindo subtemas em caso de temas macro, ou qualquer tema se theme_id for None).
+        Sorteia uma palavra do grafo Neo4j para o tema selecionado.
         """
         exclude = exclude_words or []
 
+        # Se theme_id foi informado, busca dentro do tema; caso contrário, seleciona de qualquer tema com palavras
         query = """
         MATCH (w:Word)-[:BELONGS_TO]->(t:Theme)
-        WHERE ($theme_id IS NULL 
-               OR t.id = $theme_id 
-               OR EXISTS { MATCH (t)-[:SUBTHEME_OF*1..2]->(:Theme {id: $theme_id}) })
+        WHERE ($theme_id IS NULL OR t.id = $theme_id)
           AND NOT w.normalized IN $exclude
         WITH collect({
             text: w.text,
