@@ -4,6 +4,7 @@ Screen {
     background: $surface;
     color: $text;
     align: center middle;
+    overflow: hidden;
 }
 
 /* Foco em Alto Contraste para Navegação por Teclado */
@@ -26,4 +27,13 @@ Input:focus {
 ModalScreen {
     align: center middle;
     background: rgba(0, 0, 0, 0.75);
+}
+
+/* Scrollbars discretas e sem azul intrusivo */
+ScrollBar {
+    background: transparent;
+}
+
+ScrollBarThumb {
+    background: $primary-muted;
 }

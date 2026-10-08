@@ -20,7 +20,7 @@
     grid-size: 2 1;
     grid-columns: 4fr 6fr; /* 40% esquerda (View Forca), 60% direita (Tema + Palavra + Entrada) */
     padding: 1;
-    overflow-y: auto;
+    overflow: hidden;
 }
 
 .layout-horizontal #forca-panel {
@@ -31,6 +31,7 @@
     height: 100%;
     width: 100%;
     min-width: 20;
+    overflow: hidden;
 }
 
 .layout-horizontal #forca-art {
@@ -50,13 +51,13 @@
 
 .layout-horizontal #game-main-panel {
     background: $panel;
-    border: round $accent;
+    border: round $primary;
     padding: 1 2;
     height: 100%;
     width: 100%;
     layout: vertical;
-    align: center top;
-    overflow-y: auto;
+    align: center middle;
+    overflow: hidden;
 }
 
 /* ========================================================= */
@@ -69,7 +70,7 @@
     grid-size: 1 2;
     grid-rows: 4fr 6fr; /* 40% topo (View Forca), 60% base (Tema + Palavra + Entrada) */
     padding: 0 1;
-    overflow-y: auto;
+    overflow: hidden;
 }
 
 .layout-vertical #forca-panel {
@@ -80,7 +81,7 @@
     height: 100%;
     width: 100%;
     layout: horizontal;
-    overflow-y: auto;
+    overflow: hidden;
 }
 
 .layout-vertical #forca-art {
@@ -100,13 +101,13 @@
 
 .layout-vertical #game-main-panel {
     background: $panel;
-    border: round $accent;
+    border: round $primary;
     padding: 1;
     height: 100%;
     width: 100%;
     layout: vertical;
-    align: center top;
-    overflow-y: auto;
+    align: center middle;
+    overflow: hidden;
 }
 
 /* ========================================================= */
@@ -116,7 +117,7 @@
     height: auto;
     width: 100%;
     background: $boost;
-    border: round $primary;
+    border: round $secondary;
     padding: 1;
     margin-bottom: 1;
     align: center middle;
