@@ -25,6 +25,7 @@ class ForcaApp(App):
     CSS_PATH = Path(__file__).parent / "styles" / "global.tcss"
     TITLE = "Jogo da Forca - SysOps"
     SUB_TITLE = "Textual TUI (POO Modular)"
+    theme = "textual-dark"
 
     BINDINGS = [
         Binding("ctrl+escape", "quit_app", "Sair"),

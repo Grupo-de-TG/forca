@@ -3,6 +3,7 @@ FROM python:3.11-slim
 # Configuração de TTY e saída não-bufferizada para a interface Textual
 ENV PYTHONUNBUFFERED=1 \
     TERM=xterm-256color \
+    COLORTERM=truecolor \
     LANG=C.UTF-8 \
     LC_ALL=C.UTF-8
 
