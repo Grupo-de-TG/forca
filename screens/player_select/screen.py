@@ -216,12 +216,24 @@ class SelectPlayerScreen(BaseGameModal[str]):
         self.query_one("#btn-replay", Button).focus()
 
     def action_pular(self) -> None:
+        """Pula a assinatura da partida descartando o resultado."""
+        if not self.signed:
+            app: ForcaApp = self.app  # type: ignore
+            app.current_player = None
         self.dismiss("replay")
 
     def action_replay(self) -> None:
+        """Reinicia uma nova partida."""
+        if not self.signed:
+            app: ForcaApp = self.app  # type: ignore
+            app.current_player = None
         self.dismiss("replay")
 
     def action_menu(self) -> None:
+        """Retorna ao menu principal."""
+        if not self.signed:
+            app: ForcaApp = self.app  # type: ignore
+            app.current_player = None
         self.dismiss("menu")
 
     def action_sair_jogo(self) -> None:
