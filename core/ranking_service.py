@@ -15,16 +15,28 @@ class Player:
     id: int
     name: str
     score: int = 0
-    games_played: int = 0
-    games_won: int = 0
-    current_streak: int = 0
+    partidas: int = 0
+    vitorias: int = 0
+    streak_atual: int = 0
     best_streak: int = 0
 
     @property
+    def games_played(self) -> int:
+        return self.partidas
+
+    @property
+    def games_won(self) -> int:
+        return self.vitorias
+
+    @property
+    def current_streak(self) -> int:
+        return self.streak_atual
+
+    @property
     def win_rate(self) -> float:
-        if self.games_played == 0:
+        if self.partidas == 0:
             return 0.0
-        return (self.games_won / self.games_played) * 100.0
+        return (self.vitorias / self.partidas) * 100.0
 
 
 @dataclass
@@ -32,12 +44,36 @@ class MatchRecord:
     id: int
     user_id: int
     username: str
-    won: bool
-    category_name: str
-    word: str
-    attempts_left: int
-    points_earned: int
-    played_at: str
+    vencidas: bool
+    categoria: str
+    palavra: str
+    tentativas_restantes: int
+    pontos: int
+    marca_paco: str
+
+    @property
+    def won(self) -> bool:
+        return self.vencidas
+
+    @property
+    def category_name(self) -> str:
+        return self.categoria
+
+    @property
+    def word(self) -> str:
+        return self.palavra
+
+    @property
+    def attempts_left(self) -> int:
+        return self.tentativas_restantes
+
+    @property
+    def points_earned(self) -> int:
+        return self.pontos
+
+    @property
+    def played_at(self) -> str:
+        return self.marca_paco
 
 
 class RankingService:
@@ -63,10 +99,10 @@ class RankingService:
         """Retorna todos os jogadores ordenados por pontuação, vitórias e streak."""
         with self.db.transaction() as conn:
             cursor = conn.execute("""
-                SELECT u.id, u.username, s.score, s.games_played, s.games_won, s.current_streak, s.best_streak
+                SELECT u.id, u.username, s.score, s.partidas, s.vitorias, s.streak_atual, s.best_streak
                 FROM users u
                 INNER JOIN player_stats s ON u.id = s.user_id
-                ORDER BY s.score DESC, s.games_won DESC, s.best_streak DESC;
+                ORDER BY s.score DESC, s.vitorias DESC, s.best_streak DESC;
             """)
             players = []
             for row in cursor.fetchall():
@@ -75,9 +111,9 @@ class RankingService:
                         id=row["id"],
                         name=row["username"],
                         score=row["score"],
-                        games_played=row["games_played"],
-                        games_won=row["games_won"],
-                        current_streak=row["current_streak"],
+                        partidas=row["partidas"],
+                        vitorias=row["vitorias"],
+                        streak_atual=row["streak_atual"],
                         best_streak=row["best_streak"],
                     )
                 )
@@ -87,7 +123,7 @@ class RankingService:
         """Obtém as estatísticas de um jogador por ID de usuário."""
         with self.db.transaction() as conn:
             cursor = conn.execute("""
-                SELECT u.id, u.username, s.score, s.games_played, s.games_won, s.current_streak, s.best_streak
+                SELECT u.id, u.username, s.score, s.partidas, s.vitorias, s.streak_atual, s.best_streak
                 FROM users u
                 INNER JOIN player_stats s ON u.id = s.user_id
                 WHERE u.id = ?;
@@ -98,9 +134,9 @@ class RankingService:
                     id=row["id"],
                     name=row["username"],
                     score=row["score"],
-                    games_played=row["games_played"],
-                    games_won=row["games_won"],
-                    current_streak=row["current_streak"],
+                    partidas=row["partidas"],
+                    vitorias=row["vitorias"],
+                    streak_atual=row["streak_atual"],
                     best_streak=row["best_streak"],
                 )
             return None
@@ -113,7 +149,7 @@ class RankingService:
 
         with self.db.transaction() as conn:
             cursor = conn.execute("""
-                SELECT u.id, u.username, s.score, s.games_played, s.games_won, s.current_streak, s.best_streak
+                SELECT u.id, u.username, s.score, s.partidas, s.vitorias, s.streak_atual, s.best_streak
                 FROM users u
                 INNER JOIN player_stats s ON u.id = s.user_id
                 WHERE u.username = ? COLLATE NOCASE;
@@ -124,9 +160,9 @@ class RankingService:
                     id=row["id"],
                     name=row["username"],
                     score=row["score"],
-                    games_played=row["games_played"],
-                    games_won=row["games_won"],
-                    current_streak=row["current_streak"],
+                    partidas=row["partidas"],
+                    vitorias=row["vitorias"],
+                    streak_atual=row["streak_atual"],
                     best_streak=row["best_streak"],
                 )
             return None
@@ -140,13 +176,13 @@ class RankingService:
         attempts_left: int = 0,
     ) -> Tuple[Player, int]:
         """
-        Registra atomicamente a partida no histórico (matches) e atualiza o ranking (player_stats).
+        Registra atomicamente a partida no histórico (partidas) e atualiza o ranking (player_stats).
         Retorna (Player atualizado, pontos ganhos na rodada).
         """
         with self.db.transaction() as conn:
             # 1. Carrega dados atuais do jogador
             cursor = conn.execute(
-                "SELECT score, games_played, games_won, current_streak, best_streak FROM player_stats WHERE user_id = ?;",
+                "SELECT score, partidas, vitorias, streak_atual, best_streak FROM player_stats WHERE user_id = ?;",
                 (user_id,),
             )
             row = cursor.fetchone()
@@ -154,32 +190,32 @@ class RankingService:
                 raise ValueError(f"Estatísticas não encontradas para o user_id {user_id}")
 
             score = row["score"]
-            games_played = row["games_played"] + 1
-            games_won = row["games_won"]
-            current_streak = row["current_streak"]
+            partidas = row["partidas"] + 1
+            vitorias = row["vitorias"]
+            streak_atual = row["streak_atual"]
             best_streak = row["best_streak"]
 
-            points_earned = self.calculate_match_points(won, attempts_left, current_streak)
+            points_earned = self.calculate_match_points(won, attempts_left, streak_atual)
             score += points_earned
 
             if won:
-                games_won += 1
-                current_streak += 1
-                if current_streak > best_streak:
-                    best_streak = current_streak
+                vitorias += 1
+                streak_atual += 1
+                if streak_atual > best_streak:
+                    best_streak = streak_atual
             else:
-                current_streak = 0
+                streak_atual = 0
 
             # 2. Atualiza tabela agregada player_stats
             conn.execute("""
                 UPDATE player_stats
-                SET score = ?, games_played = ?, games_won = ?, current_streak = ?, best_streak = ?, updated_at = CURRENT_TIMESTAMP
+                SET score = ?, partidas = ?, vitorias = ?, streak_atual = ?, best_streak = ?, marca_paco = CURRENT_TIMESTAMP
                 WHERE user_id = ?;
-            """, (score, games_played, games_won, current_streak, best_streak, user_id))
+            """, (score, partidas, vitorias, streak_atual, best_streak, user_id))
 
-            # 3. Insere registro individual no histórico de partidas (matches)
+            # 3. Insere registro individual no histórico de partidas
             conn.execute("""
-                INSERT INTO matches (user_id, won, category_name, word, attempts_left, points_earned)
+                INSERT INTO partidas (user_id, vencidas, categoria, palavra, tentativas_restantes, pontos)
                 VALUES (?, ?, ?, ?, ?, ?);
             """, (user_id, 1 if won else 0, category_name, word, attempts_left, points_earned))
 
@@ -192,9 +228,9 @@ class RankingService:
                 id=user_id,
                 name=username,
                 score=score,
-                games_played=games_played,
-                games_won=games_won,
-                current_streak=current_streak,
+                partidas=partidas,
+                vitorias=vitorias,
+                streak_atual=streak_atual,
                 best_streak=best_streak,
             )
             return player, points_earned
@@ -203,11 +239,11 @@ class RankingService:
         """Obtém o histórico de partidas de um jogador específico."""
         with self.db.transaction() as conn:
             cursor = conn.execute("""
-                SELECT m.id, m.user_id, u.username, m.won, m.category_name, m.word, m.attempts_left, m.points_earned, m.played_at
-                FROM matches m
-                INNER JOIN users u ON m.user_id = u.id
-                WHERE m.user_id = ?
-                ORDER BY m.id DESC
+                SELECT p.id, p.user_id, u.username, p.vencidas, p.categoria, p.palavra, p.tentativas_restantes, p.pontos, p.marca_paco
+                FROM partidas p
+                INNER JOIN users u ON p.user_id = u.id
+                WHERE p.user_id = ?
+                ORDER BY p.id DESC
                 LIMIT ?;
             """, (user_id, limit))
             records = []
@@ -217,12 +253,12 @@ class RankingService:
                         id=row["id"],
                         user_id=row["user_id"],
                         username=row["username"],
-                        won=bool(row["won"]),
-                        category_name=row["category_name"],
-                        word=row["word"],
-                        attempts_left=row["attempts_left"],
-                        points_earned=row["points_earned"],
-                        played_at=str(row["played_at"]),
+                        vencidas=bool(row["vencidas"]),
+                        categoria=row["categoria"],
+                        palavra=row["palavra"],
+                        tentativas_restantes=row["tentativas_restantes"],
+                        pontos=row["pontos"],
+                        marca_paco=str(row["marca_paco"]),
                     )
                 )
             return records
@@ -231,10 +267,10 @@ class RankingService:
         """Obtém o histórico global recente de todas as partidas."""
         with self.db.transaction() as conn:
             cursor = conn.execute("""
-                SELECT m.id, m.user_id, u.username, m.won, m.category_name, m.word, m.attempts_left, m.points_earned, m.played_at
-                FROM matches m
-                INNER JOIN users u ON m.user_id = u.id
-                ORDER BY m.id DESC
+                SELECT p.id, p.user_id, u.username, p.vencidas, p.categoria, p.palavra, p.tentativas_restantes, p.pontos, p.marca_paco
+                FROM partidas p
+                INNER JOIN users u ON p.user_id = u.id
+                ORDER BY p.id DESC
                 LIMIT ?;
             """, (limit,))
             records = []
@@ -244,13 +280,12 @@ class RankingService:
                         id=row["id"],
                         user_id=row["user_id"],
                         username=row["username"],
-                        won=bool(row["won"]),
-                        category_name=row["category_name"],
-                        word=row["word"],
-                        attempts_left=row["attempts_left"],
-                        points_earned=row["points_earned"],
-                        played_at=str(row["played_at"]),
+                        vencidas=bool(row["vencidas"]),
+                        categoria=row["categoria"],
+                        palavra=row["palavra"],
+                        tentativas_restantes=row["tentativas_restantes"],
+                        pontos=row["pontos"],
+                        marca_paco=str(row["marca_paco"]),
                     )
                 )
             return records
-

@@ -14,7 +14,11 @@ from core.database import DatabaseManager
 class User:
     id: int
     username: str
-    created_at: str = ""
+    marca_paco: str = ""
+
+    @property
+    def created_at(self) -> str:
+        return self.marca_paco
 
 
 class AuthService:
@@ -41,24 +45,24 @@ class AuthService:
 
         with self.db.transaction() as conn:
             cursor = conn.execute(
-                "SELECT id, username, created_at FROM users WHERE username = ? COLLATE NOCASE;",
+                "SELECT id, username, marca_paco FROM users WHERE username = ? COLLATE NOCASE;",
                 (clean_name,),
             )
             row = cursor.fetchone()
             if row:
-                return User(id=row["id"], username=row["username"], created_at=str(row["created_at"]))
+                return User(id=row["id"], username=row["username"], marca_paco=str(row["marca_paco"]))
             return None
 
     def get_user_by_id(self, user_id: int) -> Optional[User]:
         """Obtém os dados do usuário por ID."""
         with self.db.transaction() as conn:
             cursor = conn.execute(
-                "SELECT id, username, created_at FROM users WHERE id = ?;",
+                "SELECT id, username, marca_paco FROM users WHERE id = ?;",
                 (user_id,),
             )
             row = cursor.fetchone()
             if row:
-                return User(id=row["id"], username=row["username"], created_at=str(row["created_at"]))
+                return User(id=row["id"], username=row["username"], marca_paco=str(row["marca_paco"]))
             return None
 
     def register_user(self, username: str, password: str) -> Tuple[bool, str, Optional[User]]:
@@ -81,7 +85,7 @@ class AuthService:
                 user_id = cursor.lastrowid
                 # Inicializa linha de estatísticas do jogador
                 conn.execute(
-                    "INSERT INTO player_stats (user_id, score, games_played, games_won, current_streak, best_streak) VALUES (?, 0, 0, 0, 0, 0);",
+                    "INSERT INTO player_stats (user_id, score, partidas, vitorias, streak_atual, best_streak) VALUES (?, 0, 0, 0, 0, 0);",
                     (user_id,),
                 )
                 return True, f"Novo jogador '{clean_name}' cadastrado com sucesso!", User(id=user_id, username=clean_name)
@@ -98,7 +102,7 @@ class AuthService:
 
         with self.db.transaction() as conn:
             cursor = conn.execute(
-                "SELECT id, username, password, created_at FROM users WHERE username = ? COLLATE NOCASE;",
+                "SELECT id, username, password, marca_paco FROM users WHERE username = ? COLLATE NOCASE;",
                 (clean_name,),
             )
             row = cursor.fetchone()
@@ -107,10 +111,11 @@ class AuthService:
 
             if row["password"] == password:
                 return True, f"Autenticado com sucesso como '{row['username']}'!", User(
-                    id=row["id"], username=row["username"], created_at=str(row["created_at"])
+                    id=row["id"], username=row["username"], marca_paco=str(row["marca_paco"])
                 )
             else:
                 return False, f"Senha incorreta para o jogador '{row['username']}'.", None
+
 
     def verify_or_register_user(self, username: str, password: str) -> Tuple[bool, str, Optional[User]]:
         """

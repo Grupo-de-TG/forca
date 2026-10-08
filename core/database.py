@@ -1,6 +1,5 @@
 """
 Gerenciador de Banco de Dados SQL (SQLite) para o Jogo da Forca.
-Fornece esquema relacional com chaves estrangeiras, índices e suporte a transações.
 """
 
 from __future__ import annotations
@@ -56,7 +55,7 @@ class DatabaseManager:
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     username TEXT UNIQUE NOT NULL COLLATE NOCASE,
                     password TEXT NOT NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    marca_paco TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 );
             """)
 
@@ -66,31 +65,32 @@ class DatabaseManager:
                 CREATE TABLE IF NOT EXISTS player_stats (
                     user_id INTEGER PRIMARY KEY,
                     score INTEGER NOT NULL DEFAULT 0,
-                    games_played INTEGER NOT NULL DEFAULT 0,
-                    games_won INTEGER NOT NULL DEFAULT 0,
-                    current_streak INTEGER NOT NULL DEFAULT 0,
+                    partidas INTEGER NOT NULL DEFAULT 0,
+                    vitorias INTEGER NOT NULL DEFAULT 0,
+                    streak_atual INTEGER NOT NULL DEFAULT 0,
                     best_streak INTEGER NOT NULL DEFAULT 0,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    marca_paco TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
                 );
             """)
 
             # 3. Tabela de Histórico de Partidas
             conn.execute("""
-                CREATE TABLE IF NOT EXISTS matches (
+                CREATE TABLE IF NOT EXISTS partidas (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     user_id INTEGER NOT NULL,
-                    won INTEGER NOT NULL,
-                    category_name TEXT NOT NULL,
-                    word TEXT NOT NULL,
-                    attempts_left INTEGER NOT NULL,
-                    points_earned INTEGER NOT NULL,
-                    played_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    vencidas INTEGER NOT NULL,
+                    categoria TEXT NOT NULL,
+                    palavra TEXT NOT NULL,
+                    tentativas_restantes INTEGER NOT NULL,
+                    pontos INTEGER NOT NULL,
+                    marca_paco TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
                 );
             """)
 
             # Índices para performance em buscas e ordenação
             conn.execute("CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_stats_score ON player_stats(score DESC, games_won DESC);")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_matches_user ON matches(user_id, played_at DESC);")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_stats_score ON player_stats(score DESC, vitorias DESC);")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_partidas_user ON partidas(user_id, marca_paco DESC);")
+
