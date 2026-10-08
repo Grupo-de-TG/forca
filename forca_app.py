@@ -15,6 +15,7 @@ from core.auth_service import AuthService, User
 from core.engine import ForcaEngine
 from core.models import Categoria
 from core.ranking_service import Player, RankingService
+from core.word_repository_factory import WordRepositoryFactory
 from screens.menu.screen import MenuScreen
 
 
@@ -30,9 +31,10 @@ class ForcaApp(App):
         Binding("ctrl+q", "quit_app", "Sair"),
     ]
 
-    def __init__(self, db_path: Optional[Path] = None):
+    def __init__(self, db_path: Optional[Path] = None, word_backend: Optional[str] = None):
         super().__init__()
-        self.engine = ForcaEngine(base_dir=Path(__file__).parent)
+        self.word_repo = WordRepositoryFactory.create(backend_type=word_backend)
+        self.engine = ForcaEngine(word_repo=self.word_repo)
         self.db = DatabaseManager(db_path)
         self.auth_service = AuthService(self.db)
         self.ranking_service = RankingService(self.db)

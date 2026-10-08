@@ -1,0 +1,35 @@
+services:
+  forca-app:
+    build: .
+    container_name: forca-app
+    stdin_open: true
+    tty: true
+    environment:
+      - WORD_BACKEND=${WORD_BACKEND:-graph}
+      - NEO4J_URI=bolt://forca-neo4j:7687
+      - NEO4J_USER=neo4j
+      - NEO4J_PASS=forcasecret
+    volumes:
+      - ./data:/app/data
+    networks:
+      - forca-network
+
+  forca-neo4j:
+    image: neo4j:5.26.0-community
+    container_name: forca-neo4j
+    environment:
+      - NEO4J_AUTH=neo4j/forcasecret
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    volumes:
+      - neo4j_data:/data
+    networks:
+      - forca-network
+
+volumes:
+  neo4j_data:
+
+networks:
+  forca-network:
+    driver: bridge

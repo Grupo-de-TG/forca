@@ -1,0 +1,4 @@
+textual>=0.80.0
+neo4j>=5.26.0
+pymongo>=4.6.0
+psycopg2-binary>=2.9.9

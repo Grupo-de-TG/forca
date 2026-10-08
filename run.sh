@@ -1,11 +1,39 @@
-#!/usr/bin/env bash
-# Launcher para o Jogo da Forca TUI (Textual)
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+#!/bin/bash
+set -e
 
-if [ -f "$SCRIPT_DIR/.venv/bin/python" ]; then
-    PYTHON_EXEC="$SCRIPT_DIR/.venv/bin/python"
-else
-    PYTHON_EXEC="python3"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
+# Verifica se o usuário pediu execução local sem Docker
+if [[ "$1" == "--local" ]]; then
+    echo "🎮 Executando Forca em modo Python Local..."
+    if [ ! -d ".venv" ]; then
+        python3 -m venv .venv
+        .venv/bin/pip install -r requirements.txt
+    fi
+    source .venv/bin/activate
+    python forca_app.py
+    exit 0
 fi
 
-exec "$PYTHON_EXEC" "$SCRIPT_DIR/forca_app.py" "$@"
+# Verifica se o setup foi executado previamente
+if [ ! -f ".env" ]; then
+    echo "⚠️ Arquivo de configuração .env não encontrado."
+    echo "Executando setup padrão com Neo4j..."
+    ./setup.sh --grafo
+fi
+
+# Carrega variáveis
+export $(cat .env | xargs)
+
+# Garante que o container de banco está rodando se for modo grafo
+if [ "$WORD_BACKEND" == "graph" ]; then
+    if ! docker compose ps forca-neo4j | grep -q "Up"; then
+        echo "🌐 Iniciando container do Neo4j..."
+        docker compose up -d forca-neo4j
+        sleep 2
+    fi
+fi
+
+# Inicia o jogo conectado ao TTY do terminal
+docker compose run --rm forca-app

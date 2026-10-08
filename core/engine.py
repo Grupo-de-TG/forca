@@ -91,20 +91,8 @@ class ForcaEngine:
         """
     ]
 
-    def __init__(self, word_repo: Optional[IWordRepository] = None, base_dir: Optional[Path] = None):
-        if base_dir is None:
-            base_dir = Path(__file__).parent.parent
-        self.base_dir = base_dir
-
-        if word_repo is None:
-            # Auto-descoberta: se Neo4j estiver online usa grafo, senão fallback para arquivos .txt locais
-            neo_repo = Neo4jWordRepository()
-            if neo_repo.is_available() and len(neo_repo.list_themes()) > 0:
-                self.word_repo: IWordRepository = neo_repo
-            else:
-                self.word_repo = FileWordRepository(self.base_dir)
-        else:
-            self.word_repo = word_repo
+    def __init__(self, word_repo: IWordRepository):
+        self.word_repo = word_repo
 
     @property
     def categorias(self) -> List[Categoria]:

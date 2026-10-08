@@ -8,7 +8,7 @@ from __future__ import annotations
 from pathlib import Path
 import sys
 import time
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
@@ -61,10 +61,22 @@ PAIS_CONTINENTE_MAP = {
 }
 
 
-def populate_geography_graph(uri: str = "bolt://localhost:7687", auth: tuple = ("neo4j", "forcasecret")):
+import os
+
+def populate_geography_graph(
+    uri: Optional[str] = None, 
+    auth: Optional[tuple] = None
+):
+    if uri is None:
+        uri = os.getenv("NEO4J_URI", "bolt://localhost:7687")
+    if auth is None:
+        user = os.getenv("NEO4J_USER", "neo4j")
+        password = os.getenv("NEO4J_PASS", "forcasecret")
+        auth = (user, password)
+
     listas_dir = project_root / "listas"
 
-    print("🚀 Conectando ao Neo4j para estruturação do Grafo Geográfico...")
+    print(f"🚀 Conectando ao Neo4j em {uri} para estruturação do Grafo Geográfico...")
     with GraphDatabase.driver(uri, auth=auth) as driver:
         driver.verify_connectivity()
         with driver.session() as session:
