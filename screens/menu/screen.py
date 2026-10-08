@@ -104,8 +104,8 @@ class MenuScreen(BaseGameScreen):
             event.prevent_default()
 
     def action_jogar(self) -> None:
-        from screens.player_select.screen import SelectPlayerScreen
-        self.app.push_screen(SelectPlayerScreen())
+        from screens.game.screen import GameScreen
+        self.app.push_screen(GameScreen(self.app.selected_category))
 
     def action_abrir_ranking(self) -> None:
         from screens.ranking.screen import RankingScreen

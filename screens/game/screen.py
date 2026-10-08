@@ -254,26 +254,20 @@ class GameScreen(BaseGameScreen):
         self.app.push_screen(ChuteModal(), callback_chute)
 
     def exibir_modal_fim_de_jogo(self) -> None:
-        from screens.modals.game_over_modal import GameOverModal
+        from screens.player_select.screen import SelectPlayerScreen
         app: ForcaApp = self.app  # type: ignore
 
-        player = app.current_player
-        points_earned = 0
-        if player and self.state:
-            player, points_earned = app.ranking_service.record_game_result(
-                player.name,
-                won=self.state.venceu,
-                attempts_left=self.state.tentativas_restantes,
-            )
-            app.current_player = player
-
-        def callback_fim(acao: str) -> None:
+        def callback_fim(acao: Optional[str]) -> None:
             if acao == "replay":
                 self.iniciar_nova_partida(app.selected_category)
             elif acao == "menu":
                 self.app.pop_screen()
+            else:
+                # Se fechar sem retorno específico, reinicia ou volta
+                self.iniciar_nova_partida(app.selected_category)
 
-        self.app.push_screen(GameOverModal(self.state, player=player, points_earned=points_earned), callback_fim)
+        self.app.push_screen(SelectPlayerScreen(self.state), callback_fim)
+
 
     def action_reiniciar(self) -> None:
         app: ForcaApp = self.app  # type: ignore
