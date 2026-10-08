@@ -9,10 +9,10 @@
 }
 
 #player-select-box {
-    width: 68;
+    width: 72;
     max-width: 95%;
     height: auto;
-    max-height: 90%;
+    max-height: 92%;
     overflow-y: auto;
     background: $panel;
     border: heavy $primary;
@@ -84,7 +84,7 @@
     background: $boost;
 }
 
-#player-actions {
+#player-actions-row1, #player-actions-row2 {
     width: 100%;
     height: auto;
     layout: horizontal;
@@ -100,5 +100,7 @@
 
 .player-btn:focus {
     text-style: bold;
+    border: tall $accent;
 }
+
 

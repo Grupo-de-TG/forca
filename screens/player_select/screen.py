@@ -1,6 +1,6 @@
 """
 Tela / Modal de Assinatura de Partida e Autenticação de Jogador.
-Permite autenticar jogador existente com senha ou registrar novo jogador ao fim da partida.
+Permite autenticar jogador existente com senha, cadastrar novo jogador ou recuperar senha ao fim da partida.
 """
 
 from __future__ import annotations
@@ -17,19 +17,21 @@ from textual.widgets.option_list import Option
 from core.models import GameState
 from core.ranking_service import Player
 from interfaces.base_modal import BaseGameModal
+from screens.modals.reset_password_modal import ResetPasswordModal
 
 if TYPE_CHECKING:
     from forca_app import ForcaApp
 
 
 class SelectPlayerScreen(BaseGameModal[str]):
-    """Modal de assinatura e registro de score pós-partida com autenticação."""
+    """Modal de assinatura e registro de score pós-partida com autenticação e recuperação."""
 
     CSS_PATH = Path(__file__).parent / "player_select.tcss"
 
     BINDINGS = [
         Binding("escape", "pular", "Continuar"),
         Binding("ctrl+escape", "pular", "Continuar"),
+        Binding("ctrl+e", "esqueci_senha", "Esqueci Senha"),
         Binding("ctrl+r", "replay", "Jogar Novamente"),
         Binding("ctrl+m", "menu", "Menu"),
         Binding("ctrl+q", "sair_jogo", "Sair"),
@@ -92,11 +94,14 @@ class SelectPlayerScreen(BaseGameModal[str]):
                 yield Label("Perfis Registrados no Ranking:", id="player-history-label")
                 yield OptionList(id="player-list")
 
-                with Horizontal(id="player-actions"):
-                    yield Button("Assinar Partida [Enter]", id="btn-assinar", variant="success", classes="player-btn")
+                with Horizontal(id="player-actions-row1"):
+                    yield Button("Assinar [Enter]", id="btn-assinar", variant="success", classes="player-btn")
+                    yield Button("Esqueci Senha [Ctrl+E]", id="btn-esqueci-senha", variant="warning", classes="player-btn")
                     yield Button("Pular [Esc]", id="btn-pular", variant="default", classes="player-btn")
-                    yield Button("Jogar Novamente [Ctrl+R]", id="btn-replay", variant="warning", classes="player-btn")
-                    yield Button("Menu [Ctrl+M]", id="btn-menu", variant="error", classes="player-btn")
+
+                with Horizontal(id="player-actions-row2"):
+                    yield Button("Jogar Novamente [Ctrl+R]", id="btn-replay", variant="primary", classes="player-btn")
+                    yield Button("Menu Principal [Ctrl+M]", id="btn-menu", variant="error", classes="player-btn")
 
         yield Footer()
 
@@ -154,10 +159,98 @@ class SelectPlayerScreen(BaseGameModal[str]):
         elif event.input.id == "input-player-password":
             self.action_assinar()
 
+    # ===== Navegação Robusta por Setas =====
+    def on_key(self, event: events.Key) -> None:
+        focused = self.focused
+        focused_id = focused.id if focused else ""
+
+        if event.key == "down":
+            if focused_id == "input-player-name":
+                self.query_one("#input-player-password", Input).focus()
+                event.prevent_default()
+            elif focused_id == "input-player-password":
+                opt_list = self.query_one("#player-list", OptionList)
+                if self.players:
+                    opt_list.focus()
+                else:
+                    self.query_one("#btn-assinar", Button).focus()
+                event.prevent_default()
+            elif focused_id == "player-list":
+                self.query_one("#btn-assinar", Button).focus()
+                event.prevent_default()
+            elif focused_id == "btn-assinar":
+                self.query_one("#btn-replay", Button).focus()
+                event.prevent_default()
+            elif focused_id in ("btn-esqueci-senha", "btn-pular"):
+                self.query_one("#btn-menu", Button).focus()
+                event.prevent_default()
+            elif focused_id in ("btn-replay", "btn-menu"):
+                self.query_one("#input-player-name", Input).focus()
+                event.prevent_default()
+
+        elif event.key == "up":
+            if focused_id == "input-player-name":
+                self.query_one("#btn-replay", Button).focus()
+                event.prevent_default()
+            elif focused_id == "input-player-password":
+                self.query_one("#input-player-name", Input).focus()
+                event.prevent_default()
+            elif focused_id == "player-list":
+                self.query_one("#input-player-password", Input).focus()
+                event.prevent_default()
+            elif focused_id in ("btn-assinar", "btn-esqueci-senha", "btn-pular"):
+                if self.players:
+                    self.query_one("#player-list", OptionList).focus()
+                else:
+                    self.query_one("#input-player-password", Input).focus()
+                event.prevent_default()
+            elif focused_id == "btn-replay":
+                self.query_one("#btn-assinar", Button).focus()
+                event.prevent_default()
+            elif focused_id == "btn-menu":
+                self.query_one("#btn-esqueci-senha", Button).focus()
+                event.prevent_default()
+
+        elif event.key == "right":
+            if focused_id == "btn-assinar":
+                self.query_one("#btn-esqueci-senha", Button).focus()
+                event.prevent_default()
+            elif focused_id == "btn-esqueci-senha":
+                self.query_one("#btn-pular", Button).focus()
+                event.prevent_default()
+            elif focused_id == "btn-pular":
+                self.query_one("#btn-assinar", Button).focus()
+                event.prevent_default()
+            elif focused_id == "btn-replay":
+                self.query_one("#btn-menu", Button).focus()
+                event.prevent_default()
+            elif focused_id == "btn-menu":
+                self.query_one("#btn-replay", Button).focus()
+                event.prevent_default()
+
+        elif event.key == "left":
+            if focused_id == "btn-pular":
+                self.query_one("#btn-esqueci-senha", Button).focus()
+                event.prevent_default()
+            elif focused_id == "btn-esqueci-senha":
+                self.query_one("#btn-assinar", Button).focus()
+                event.prevent_default()
+            elif focused_id == "btn-assinar":
+                self.query_one("#btn-pular", Button).focus()
+                event.prevent_default()
+            elif focused_id == "btn-menu":
+                self.query_one("#btn-replay", Button).focus()
+                event.prevent_default()
+            elif focused_id == "btn-replay":
+                self.query_one("#btn-menu", Button).focus()
+                event.prevent_default()
+
     def on_button_pressed(self, event: Button.Pressed) -> None:
         btn_id = event.button.id
         if btn_id == "btn-assinar":
             self.action_assinar()
+        elif btn_id == "btn-esqueci-senha":
+            self.action_esqueci_senha()
         elif btn_id == "btn-pular":
             self.action_pular()
         elif btn_id == "btn-replay":
@@ -215,6 +308,20 @@ class SelectPlayerScreen(BaseGameModal[str]):
         self.carregar_jogadores()
         self.query_one("#btn-replay", Button).focus()
 
+    def action_esqueci_senha(self) -> None:
+        """Abre o modal para redefinir senha do jogador."""
+        current_name = self.query_one("#input-player-name", Input).value.strip()
+
+        def callback_reset(nova_senha: Optional[str]) -> None:
+            if nova_senha:
+                pwd_input = self.query_one("#input-player-password", Input)
+                pwd_input.value = nova_senha
+                status = self.query_one("#player-status-msg", Static)
+                status.update("[bold green]✅ Senha redefinida! Pressione Enter para assinar a partida.[/bold green]")
+                self.query_one("#btn-assinar", Button).focus()
+
+        self.app.push_screen(ResetPasswordModal(default_name=current_name), callback_reset)
+
     def action_pular(self) -> None:
         """Pula a assinatura da partida descartando o resultado."""
         if not self.signed:
@@ -238,4 +345,5 @@ class SelectPlayerScreen(BaseGameModal[str]):
 
     def action_sair_jogo(self) -> None:
         self.app.exit()
+
 

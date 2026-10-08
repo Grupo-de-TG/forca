@@ -161,6 +161,28 @@ class RankingService:
         self._save_data(data)
         return True, f"Novo jogador '{new_player.name}' cadastrado com sucesso!", new_player
 
+    def reset_password(self, name: str, new_password: str) -> Tuple[bool, str, Optional[Player]]:
+        """Redefine a senha de um jogador existente com novo salt e hash."""
+        clean_name = name.strip()
+        if not clean_name:
+            return False, "O nome do jogador não pode ser vazio.", None
+        if not new_password:
+            return False, "A nova senha não pode ser vazia.", None
+
+        data = self._load_data()
+        key = clean_name.lower()
+        if key not in data:
+            return False, f"Jogador '{clean_name}' não encontrado no ranking.", None
+
+        player = Player.from_dict(data[key])
+        pwd_hash, pwd_salt = hash_password(new_password)
+        player.password_hash = pwd_hash
+        player.password_salt = pwd_salt
+        data[key] = player.to_dict()
+        self._save_data(data)
+        return True, f"Senha do jogador '{player.name}' redefinida com sucesso!", player
+
+
     @staticmethod
     def calculate_match_points(won: bool, attempts_left: int = 0, current_streak: int = 0) -> int:
         """Calcula os pontos potenciais de uma partida."""
