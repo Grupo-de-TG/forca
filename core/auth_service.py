@@ -1,36 +1,13 @@
 """
-Serviço Dedicado de Autenticação, Usuários e Criptografia (AuthService).
-Responsável exclusivo pelo gerenciamento de credenciais e integridade de acesso.
+Serviço Dedicado de Autenticação e Usuários (AuthService).
+Gerenciamento simples e direto de credenciais (usuário e senha) no SQLite.
 """
 
 from __future__ import annotations
 from dataclasses import dataclass
-import hashlib
-import secrets
 from typing import Optional, Tuple
 
 from core.database import DatabaseManager
-
-
-def hash_password(password: str, salt: str = "") -> Tuple[str, str]:
-    """Gera hash PBKDF2-HMAC-SHA256 seguro com salt."""
-    if not salt:
-        salt = secrets.token_hex(16)
-    hashed = hashlib.pbkdf2_hmac(
-        "sha256",
-        password.encode("utf-8"),
-        salt.encode("utf-8"),
-        100000,
-    ).hex()
-    return hashed, salt
-
-
-def verify_password(password: str, hashed: str, salt: str) -> bool:
-    """Verifica se a senha fornecida confere com o hash e salt usando tempo constante."""
-    if not hashed or not salt:
-        return False
-    new_hash, _ = hash_password(password, salt)
-    return secrets.compare_digest(new_hash, hashed)
 
 
 @dataclass
@@ -41,7 +18,7 @@ class User:
 
 
 class AuthService:
-    """Serviço de Autenticação com persistência em banco de dados relacional SQL."""
+    """Serviço de Autenticação simples com persistência em banco de dados relacional SQL."""
 
     def __init__(self, db: DatabaseManager):
         self.db = db
@@ -95,13 +72,11 @@ class AuthService:
         if self.user_exists(clean_name):
             return False, f"O usuário '{clean_name}' já existe.", None
 
-        pwd_hash, pwd_salt = hash_password(password)
-
         try:
             with self.db.transaction() as conn:
                 cursor = conn.execute(
-                    "INSERT INTO users (username, password_hash, password_salt) VALUES (?, ?, ?);",
-                    (clean_name, pwd_hash, pwd_salt),
+                    "INSERT INTO users (username, password) VALUES (?, ?);",
+                    (clean_name, password),
                 )
                 user_id = cursor.lastrowid
                 # Inicializa linha de estatísticas do jogador
@@ -114,7 +89,7 @@ class AuthService:
             return False, f"Erro ao registrar usuário: {e}", None
 
     def authenticate(self, username: str, password: str) -> Tuple[bool, str, Optional[User]]:
-        """Autentica usuário e senha contra o banco de dados."""
+        """Autentica usuário e senha diretamente contra o banco de dados."""
         clean_name = username.strip()
         if not clean_name:
             return False, "O nome do jogador não pode ser vazio.", None
@@ -123,14 +98,14 @@ class AuthService:
 
         with self.db.transaction() as conn:
             cursor = conn.execute(
-                "SELECT id, username, password_hash, password_salt, created_at FROM users WHERE username = ? COLLATE NOCASE;",
+                "SELECT id, username, password, created_at FROM users WHERE username = ? COLLATE NOCASE;",
                 (clean_name,),
             )
             row = cursor.fetchone()
             if not row:
                 return False, f"Jogador '{clean_name}' não encontrado.", None
 
-            if verify_password(password, row["password_hash"], row["password_salt"]):
+            if row["password"] == password:
                 return True, f"Autenticado com sucesso como '{row['username']}'!", User(
                     id=row["id"], username=row["username"], created_at=str(row["created_at"])
                 )
@@ -155,7 +130,7 @@ class AuthService:
             return self.register_user(clean_name, password)
 
     def reset_password(self, username: str, new_password: str) -> Tuple[bool, str, Optional[User]]:
-        """Redefine a senha de um usuário existente."""
+        """Redefine a senha simples de um usuário existente."""
         clean_name = username.strip()
         if not clean_name:
             return False, "O nome do jogador não pode ser vazio.", None
@@ -166,13 +141,11 @@ class AuthService:
         if not user:
             return False, f"Jogador '{clean_name}' não encontrado.", None
 
-        pwd_hash, pwd_salt = hash_password(new_password)
-
         try:
             with self.db.transaction() as conn:
                 conn.execute(
-                    "UPDATE users SET password_hash = ?, password_salt = ? WHERE id = ?;",
-                    (pwd_hash, pwd_salt, user.id),
+                    "UPDATE users SET password = ? WHERE id = ?;",
+                    (new_password, user.id),
                 )
                 return True, f"Senha do jogador '{user.username}' redefinida com sucesso!", user
         except Exception as e:

@@ -50,16 +50,16 @@ class DatabaseManager:
     def init_schema(self) -> None:
         """Cria as tabelas e índices se não existirem."""
         with self.transaction() as conn:
-            # 1. Tabela de Usuários e Autenticação
+            # 1. Tabela de Usuários e Autenticação Simples
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS users (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     username TEXT UNIQUE NOT NULL COLLATE NOCASE,
-                    password_hash TEXT NOT NULL,
-                    password_salt TEXT NOT NULL,
+                    password TEXT NOT NULL,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 );
             """)
+
 
             # 2. Tabela de Estatísticas e Ranking dos Jogadores
             conn.execute("""
