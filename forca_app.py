@@ -32,7 +32,7 @@ class ForcaApp(App):
 
     def __init__(self, db_path: Optional[Path] = None):
         super().__init__()
-        self.engine = ForcaEngine(Path(__file__).parent)
+        self.engine = ForcaEngine(base_dir=Path(__file__).parent)
         self.db = DatabaseManager(db_path)
         self.auth_service = AuthService(self.db)
         self.ranking_service = RankingService(self.db)

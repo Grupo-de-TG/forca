@@ -1,5 +1,6 @@
 """
 Implementação do repositório de palavras utilizando o Neo4j Graph Database.
+Suporta consultas taxonômicas hierárquicas (temas raiz e subtemas).
 """
 
 from __future__ import annotations
@@ -38,11 +39,12 @@ class Neo4jWordRepository(IWordRepository):
             return False
 
     def list_themes(self) -> List[Categoria]:
-        """Consulta todos os nós (:Theme) presentes no grafo."""
+        """Consulta todos os nós (:Theme) presentes no grafo calculando palavras diretas ou via subtemas."""
         query = """
         MATCH (t:Theme)
-        OPTIONAL MATCH (t)<-[:BELONGS_TO]-(w:Word)
-        RETURN t.id AS id, t.name AS name, t.group AS group, count(w) AS total_words
+        OPTIONAL MATCH (w:Word)-[:BELONGS_TO]->(sub:Theme)
+        WHERE sub = t OR (sub)-[:SUBTHEME_OF*1..2]->(t)
+        RETURN t.id AS id, t.name AS name, coalesce(t.group, 'Geral') AS group, count(DISTINCT w) AS total_words
         ORDER BY t.name
         """
         categorias = []
@@ -53,7 +55,7 @@ class Neo4jWordRepository(IWordRepository):
                     categorias.append(Categoria(
                         id=record["id"],
                         nome=record["name"],
-                        group=record["group"] or "Geral",
+                        group=record["group"],
                         total_palavras=record["total_words"]
                     ))
         except Exception:
@@ -67,13 +69,15 @@ class Neo4jWordRepository(IWordRepository):
     ) -> Optional[WordData]:
         """
         Sorteia uma palavra do grafo Neo4j para o tema selecionado
-        (ou qualquer tema se theme_id for None).
+        (incluindo subtemas em caso de temas macro, ou qualquer tema se theme_id for None).
         """
         exclude = exclude_words or []
 
         query = """
         MATCH (w:Word)-[:BELONGS_TO]->(t:Theme)
-        WHERE ($theme_id IS NULL OR t.id = $theme_id)
+        WHERE ($theme_id IS NULL 
+               OR t.id = $theme_id 
+               OR EXISTS { MATCH (t)-[:SUBTHEME_OF*1..2]->(:Theme {id: $theme_id}) })
           AND NOT w.normalized IN $exclude
         WITH collect({
             text: w.text,
