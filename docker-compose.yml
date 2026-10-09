@@ -12,6 +12,7 @@ services:
       - TERM=${TERM:-xterm-256color}
       - COLORTERM=${COLORTERM:-truecolor}
     volumes:
+      - .:/app
       - ./data:/app/data
     networks:
       - forca-network

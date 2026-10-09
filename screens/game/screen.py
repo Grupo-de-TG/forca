@@ -67,6 +67,7 @@ class GameScreen(BaseGameScreen):
                 with Vertical(id="tema-palavra-container"):
                     yield Label(id="badge-categoria")
                     yield Static(id="palavra-secreta")
+                    yield Label(id="dica-grafo")
 
                 # Painel de Inserção de Letras, Status e Histórico
                 with Vertical(id="insert-letras-panel"):
@@ -134,9 +135,10 @@ class GameScreen(BaseGameScreen):
             f"Tentativas: {self.state.tentativas_restantes}/6\n{coracoes}"
         )
 
-        # 2. Categoria e Palavra Secreta
+        # 2. Categoria, Palavra Secreta e Dica do Grafo
         self.query_one("#badge-categoria", Label).update(f"Tema: {self.state.categoria_nome}")
         self.query_one("#palavra-secreta", Static).update(self.state.progresso_exibicao)
+        self.query_one("#dica-grafo", Label).update(self.state.dica_atual)
 
         # 3. Status
         self.query_one("#status-mensagem", Label).update(self.state.mensagem)

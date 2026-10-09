@@ -9,10 +9,12 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 
 from interfaces.word_repository import IWordRepository
+from interfaces.hint_repository import IHintRepository
 from core.models import Categoria, GameState, WordData
 from core.normalizer import normalizar_texto
 from core.neo4j_word_repository import Neo4jWordRepository
 from core.file_word_repository import FileWordRepository
+from core.neo4j_hint_repository import Neo4jHintRepository
 
 
 class ForcaEngine:
@@ -91,8 +93,13 @@ class ForcaEngine:
         """
     ]
 
-    def __init__(self, word_repo: IWordRepository):
+    def __init__(
+        self,
+        word_repo: IWordRepository,
+        hint_repo: Optional[IHintRepository] = None
+    ):
         self.word_repo = word_repo
+        self.hint_repo = hint_repo if hint_repo is not None else Neo4jHintRepository()
 
     @property
     def categorias(self) -> List[Categoria]:
@@ -115,6 +122,13 @@ class ForcaEngine:
 
     def novo_jogo(self, categoria: Optional[Categoria] = None) -> GameState:
         cat_nome, original, norm = self.sortear_palavra(categoria)
+        dicas = []
+        if self.hint_repo:
+            try:
+                dicas = self.hint_repo.get_hints(norm)
+            except Exception:
+                dicas = []
+
         return GameState(
             categoria_nome=cat_nome,
             palavra_original=original,
@@ -123,6 +137,7 @@ class ForcaEngine:
             letras_certas=[],
             letras_erradas=[],
             mensagem="Bora começar! Digite uma letra no teclado e tecle Enter.",
+            dicas=dicas,
         )
 
     def processar_tentativa(self, state: GameState, tentativa: str) -> Tuple[GameState, str]:

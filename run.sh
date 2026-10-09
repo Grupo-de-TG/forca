@@ -26,13 +26,11 @@ fi
 # Carrega variáveis
 export $(cat .env | xargs)
 
-# Garante que o container de banco está rodando se for modo grafo
-if [ "$WORD_BACKEND" == "graph" ]; then
-    if ! docker compose ps forca-neo4j | grep -q "Up"; then
-        echo "🌐 Iniciando container do Neo4j..."
-        docker compose up -d forca-neo4j
-        sleep 2
-    fi
+# Garante que o container do Neo4j (Knowledge Graph de Dicas) está rodando
+if ! docker compose ps forca-neo4j | grep -q "Up"; then
+    echo "🌐 Iniciando container do Neo4j (Grafo de Dicas)..."
+    docker compose up -d forca-neo4j
+    sleep 2
 fi
 
 # Inicia o jogo conectado ao TTY do terminal

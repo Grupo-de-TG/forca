@@ -141,6 +141,18 @@
     width: 100%;
 }
 
+#dica-grafo {
+    text-align: center;
+    color: $accent;
+    text-style: bold;
+    background: $panel;
+    border: dashed $accent;
+    padding: 0 1;
+    margin-top: 1;
+    width: 100%;
+    height: auto;
+}
+
 /* ========================================================= */
 /* PARTE DE INSERT DE LETRAS, STATUS E HISTÓRICO             */
 /* ========================================================= */

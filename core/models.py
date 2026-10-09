@@ -103,10 +103,24 @@ class GameState:
     venceu: bool = False
     fim_de_jogo: bool = False
     chute_usado: bool = False
+    dicas: List[str] = field(default_factory=list)
 
     @property
     def erros(self) -> int:
         return 6 - self.tentativas_restantes
+
+    @property
+    def total_tentativas_feitas(self) -> int:
+        return len(self.todas_tentativas)
+
+    @property
+    def dica_atual(self) -> str:
+        """Retorna a dica correspondente ao número de letras tentadas."""
+        if not self.dicas:
+            return "💡 Dica: Sem pistas adicionais no grafo."
+        idx = min(self.total_tentativas_feitas, len(self.dicas) - 1)
+        total = len(self.dicas)
+        return f"💡 Dica ({idx + 1}/{total}): {self.dicas[idx]}"
 
     @property
     def progresso_exibicao(self) -> str:

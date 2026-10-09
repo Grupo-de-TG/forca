@@ -93,9 +93,9 @@ forca_zipada/
 
 ---
 
-## 🌐 Grafo Geográfico no Neo4j (Taxonomia & Conexões)
+## 🌐 Grafo de Conhecimento e Dicas no Neo4j
 
-O vocabulário geográfico está estruturado em um grafo de conhecimento no **Neo4j**:
+O Neo4j atua como um **Knowledge Graph de Dicas Progressivas**. Durante a partida, a cada letra enviada pelo jogador, o motor do jogo consulta o grafo em tempo real e revela uma nova dica contextual através da travessia de relacionamentos:
 
 ```mermaid
 graph TD
@@ -120,9 +120,13 @@ graph TD
     W_Brasil -->|"[:BELONGS_TO]"| Pais
 ```
 
-* **5.520 Nós de Palavras** indexados com normalização NFKD.
-* **5.544 Relações `[:BELONGS_TO]`** vinculando palavras às suas categorias.
-* **5.530 Relações `[:LOCATED_IN]`** mapeando rotas geográficas (*Município $\rightarrow$ Estado $\rightarrow$ País $\rightarrow$ Continente*).
+### 💡 Mecânica de Dicas Automáticas
+A cada letra digitada, o jogo avança dinamicamente o nível de profundidade no grafo:
+1. **Dica 1 (Início):** Classificação taxonômica (*"🏛️ Tipo: Município Brasileiro"*).
+2. **Dica 2 (1ª Letra):** Relacionamento de 1º salto (*"📍 Situado em São Paulo"*).
+3. **Dica 3 (2ª Letra):** Relacionamento de 2º salto (*"🌎 Continente: América"*).
+4. **Dica 4 (3ª Letra):** Morfologia e extensão da palavra (*"📏 Palavra possui 8 letras"*).
+5. **Dica 5 (4ª Letra):** Pista fonética/letra inicial (*"🔤 Primeira letra é 'C'"*).
 
 ---
 
@@ -130,15 +134,10 @@ graph TD
 
 A aplicação roda em containers Docker interativos com suporte a cores 24-bit (TrueColor) e TTY:
 
-### 1. Provisionamento e Configuração (`./setup.sh`)
-O script de setup aceita flags para definir qual backend ativar:
-
+### 1. Provisionamento e Grafo de Dicas (`./setup.sh`)
 ```bash
-# Provisiona com Neo4j Graph Database e popula o grafo (Padrão):
-./setup.sh --grafo
-
-# Provisiona para uso com arquivos locais:
-./setup.sh --arquivo
+# Constrói o container da aplicação e popula o Knowledge Graph no Neo4j:
+./setup.sh
 ```
 
 ### 2. Iniciar o Jogo (`./run.sh`)
