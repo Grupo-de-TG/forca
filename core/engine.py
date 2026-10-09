@@ -175,11 +175,11 @@ class ForcaEngine:
         if acertou_tudo:
             state.venceu = True
             state.fim_de_jogo = True
-            state.mensagem = f"🎉 Parabéns! Você descobriu a palavra: {state.palavra_original}"
+            state.mensagem = f"Parabéns! Você descobriu a palavra: {state.palavra_original}"
         elif state.tentativas_restantes <= 0:
             state.venceu = False
             state.fim_de_jogo = True
-            state.mensagem = f"💀 Fim de jogo! A palavra era: {state.palavra_original}"
+            state.mensagem = f"Fim de jogo! A palavra era: {state.palavra_original}"
 
         return state, feedback
 
@@ -197,12 +197,12 @@ class ForcaEngine:
             for c in state.palavra_normalizada:
                 if c.isalpha() and c not in state.letras_certas:
                     state.letras_certas.append(c)
-            state.mensagem = f"🎯 Chute certeiro! Você acertou: {state.palavra_original}"
+            state.mensagem = f"Chute certeiro! Você acertou: {state.palavra_original}"
             return state, True
         else:
             state.venceu = False
             state.tentativas_restantes = 0
-            state.mensagem = f"❌ Chute incorreto ({chute})! A palavra era: {state.palavra_original}"
+            state.mensagem = f"Chute incorreto ({chute})! A palavra era: {state.palavra_original}"
             return state, False
 
     def obter_arte_forca(self, erros: int) -> str:
