@@ -1,7 +1,7 @@
 """
 Implementação do repositório de dicas usando Neo4j Graph Database.
 Executa consultas e travessias no grafo (ex: [:LOCATED_IN], [:BELONGS_TO])
-para construir pistas progressivas em tempo real.
+para construir pistas progressivas em linguagem natural e fluida.
 """
 
 from __future__ import annotations
@@ -50,7 +50,8 @@ class Neo4jHintRepository(IHintRepository):
 
     def get_hints(self, word_normalized: str) -> List[str]:
         """
-        Gera uma lista progressiva de dicas navegando pelos nós e relacionamentos do grafo.
+        Gera uma lista progressiva de dicas em linguagem natural,
+        navegando pelos nós e relacionamentos do grafo geográfico.
         """
         if not self.is_available():
             return self._fallback_hints(word_normalized)
@@ -61,7 +62,7 @@ class Neo4jHintRepository(IHintRepository):
                 query = """
                 MATCH (w:Word {normalized: $norm})
                 OPTIONAL MATCH (w)-[:BELONGS_TO]->(t:Theme)
-                OPTIONAL MATCH path = (w)-[:LOCATED_IN*1..3]->(ancestor:Word)
+                OPTIONAL MATCH path = (w)-[:LOCATED_IN*1..4]->(ancestor:Word)
                 OPTIONAL MATCH (child:Word)-[:LOCATED_IN]->(w)
                 RETURN w.text AS text,
                        w.type AS tipo,
@@ -87,42 +88,59 @@ class Neo4jHintRepository(IHintRepository):
                 theme_name = result["theme_name"]
                 ancestrais = result["ancestrais"] or []
                 filhos = result["filhos_amostra"] or []
-                total_filhos = result["total_filhos"] or 0
 
-                # Dica 1: Classificação no Grafo
+                # 1. Município
                 if tipo == "municipio":
-                    hints.append("Classificação: Município Brasileiro")
+                    hints.append("É uma cidade do Brasil")
+                    if regiao:
+                        hints.append(f"Fica localizada na região {regiao}")
+                    hints.append("Fica no continente América")
+                    hints.append(f"A palavra possui {length} letras")
+                    hints.append(f"Começa com a letra '{text[0].upper()}'")
+
+                # 2. Estado
                 elif tipo == "estado":
-                    hints.append("Classificação: Unidade Federativa / Estado do Brasil")
+                    uf_str = f" com a sigla {uf}" if uf and uf != "--" else ""
+                    hints.append(f"É um estado do Brasil{uf_str}")
+                    if regiao:
+                        hints.append(f"Fica localizado na região {regiao}")
+                    hints.append("Fica no continente América")
+                    hints.append(f"A palavra possui {length} letras")
+                    hints.append(f"Começa com a letra '{text[0].upper()}'")
+
+                # 3. País
                 elif tipo == "pais":
-                    hints.append("Classificação: País do mundo")
+                    hints.append("É um país do mundo")
+                    if ancestrais:
+                        hints.append(f"Fica situado no continente {ancestrais[0]}")
+                    hints.append(f"A palavra possui {length} letras")
+                    hints.append(f"Começa com a letra '{text[0].upper()}'")
+
+                # 4. Continente
                 elif tipo == "continente":
-                    hints.append("Classificação: Continente da Terra")
-                elif theme_name:
-                    hints.append(f"Categoria no Grafo: {theme_name}")
+                    hints.append("É um continente do planeta Terra")
+                    if filhos:
+                        hints.append(f"Abrange países como {', '.join(filhos)}")
+                    hints.append(f"A palavra possui {length} letras")
+                    hints.append(f"Começa com a letra '{text[0].upper()}'")
 
-                # Dica 2: Relacionamentos diretos / Metadados Geográficos
-                if uf and regiao:
-                    hints.append(f"Região: {regiao} (Sigla: {uf})")
-                elif ancestrais:
-                    hints.append(f"Localização: Situado em {ancestrais[0]}")
-                elif tipo == "continente" and filhos:
-                    hints.append(f"Abrange países como: {', '.join(filhos)}")
+                # 5. Região
+                elif tipo == "regiao":
+                    hints.append("É uma das 5 grandes regiões geográficas do Brasil")
+                    hints.append("Agrupa vários estados no território nacional")
+                    hints.append(f"A palavra possui {length} letras")
+                    hints.append(f"Começa com a letra '{text[0].upper()}'")
 
-                # Dica 3: Ancestrais em saltos maiores (N-hops) ou Conexões descendentes
-                if len(ancestrais) > 1:
-                    hints.append(f"Continente / Bloco: {ancestrais[-1]}")
-                elif total_filhos > 3:
-                    hints.append(f"Possui {total_filhos} localidades subordinadas no mapa")
+                # 6. Tema Geral / Verbos
+                else:
+                    if theme_name == "Conjugações":
+                        hints.append("É uma conjugação verbal da língua portuguesa")
+                    elif theme_name:
+                        hints.append(f"Pertence ao grupo de {theme_name}")
+                    hints.append(f"A palavra possui {length} letras")
+                    hints.append(f"Começa com a letra '{text[0].upper()}'")
 
-                # Dica 4: Característica morfológica
-                hints.append(f"Estrutura: A palavra possui {length} letras")
-
-                # Dica 5: Pista de letra inicial
-                if text:
-                    hints.append(f"Pista: A primeira letra é '{text[0].upper()}'")
-
-        except Exception as e:
+        except Exception:
             return self._fallback_hints(word_normalized)
 
         return hints if hints else self._fallback_hints(word_normalized)
@@ -130,8 +148,8 @@ class Neo4jHintRepository(IHintRepository):
     def _fallback_hints(self, word_normalized: str) -> List[str]:
         length = len(word_normalized)
         hints = [
-            f"Estrutura: Palavra com {length} letras.",
+            f"A palavra possui {length} letras.",
         ]
         if length > 0:
-            hints.append(f"Pista: Começa com a letra '{word_normalized[0].upper()}'.")
+            hints.append(f"Começa com a letra '{word_normalized[0].upper()}'.")
         return hints

@@ -129,6 +129,9 @@ class ForcaEngine:
             except Exception:
                 dicas = []
 
+        if cat_nome == "Conjugações" and not any("conjugação" in d.lower() for d in dicas):
+            dicas.insert(0, "É uma conjugação verbal da língua portuguesa")
+
         return GameState(
             categoria_nome=cat_nome,
             palavra_original=original,

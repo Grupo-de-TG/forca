@@ -1,6 +1,6 @@
 """
 Script de Ingestão e Estruturação do Grafo Geográfico no Neo4j.
-Cria a taxonomia hierárquica (Geografia -> Continentes, Países, Estados, Municípios)
+Cria a taxonomia hierárquica (Geografia -> Continentes, Países, Regiões, Estados, Municípios)
 e as relações de pertencimento [:BELONGS_TO] e localização [:LOCATED_IN].
 """
 
@@ -9,6 +9,7 @@ from pathlib import Path
 import sys
 import time
 from typing import Dict, List, Optional
+import os
 
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
@@ -47,6 +48,8 @@ ESTADOS_METADATA = {
     "Tocantins": {"uf": "TO", "regiao": "Norte"},
 }
 
+REGIOES_BRASIL = ["Norte", "Nordeste", "Centro-Oeste", "Sudeste", "Sul"]
+
 PAIS_CONTINENTE_MAP = {
     "Brasil": "América", "Argentina": "América", "Chile": "América", "Colômbia": "América",
     "Uruguai": "América", "Paraguai": "América", "Peru": "América", "Bolívia": "América",
@@ -61,8 +64,6 @@ PAIS_CONTINENTE_MAP = {
 }
 
 
-import os
-
 def populate_geography_graph(
     uri: Optional[str] = None, 
     auth: Optional[tuple] = None
@@ -76,17 +77,17 @@ def populate_geography_graph(
 
     listas_dir = project_root / "listas"
 
-    print(f"🚀 Conectando ao Neo4j em {uri} para estruturação do Grafo Geográfico...")
-    with GraphDatabase.driver(uri, auth=auth) as driver:
+    print(f"Conectando ao Neo4j em {uri} para estruturação do Grafo Geográfico...")
+    with GraphDatabase.driver(uri, auth=auth, notifications_min_severity="OFF") as driver:
         driver.verify_connectivity()
         with driver.session() as session:
             # 1. Limpar e criar constraints
-            print("⚙️ Configurando Constraints e Índices...")
+            print("Configurando Constraints e Índices...")
             session.run("CREATE CONSTRAINT theme_id_unique IF NOT EXISTS FOR (t:Theme) REQUIRE t.id IS UNIQUE")
             session.run("CREATE CONSTRAINT word_normalized_unique IF NOT EXISTS FOR (w:Word) REQUIRE w.normalized IS UNIQUE")
 
             # 2. Criar Hierarquia Taxonômica de Temas
-            print("🗺️ Criando Árvore Taxonômica de Temas...")
+            print("Criando Árvore Taxonômica de Temas...")
             session.run("""
                 MERGE (geo:Theme {id: 'geografia'})
                 SET geo.name = 'Geografia Geral', geo.group = 'Geografia'
@@ -109,8 +110,8 @@ def populate_geography_graph(
                 MERGE (mun)-[:SUBTHEME_OF]->(est)
             """)
 
-            # 3. Importar Continentes
-            print("🌐 Importando Continentes...")
+            # 3. Criar Continentes
+            print("Importando Continentes...")
             with open(listas_dir / "continentes.txt", "r", encoding="utf-8") as f:
                 for line in f:
                     nome = line.strip()
@@ -124,14 +125,14 @@ def populate_geography_graph(
                         MERGE (w)-[:BELONGS_TO {weight: 1.0}]->(t)
                     """, text=nome, norm=normalizar_texto(nome))
 
-            # 4. Importar Países e Ligar a Continentes
-            print("🏳️ Importando Países e relacionando a Continentes...")
+            # 4. Criar Países e Ligar a Continentes
+            print("Importando Países e relacionando a Continentes...")
             with open(listas_dir / "paises.txt", "r", encoding="utf-8") as f:
                 for line in f:
                     nome = line.strip()
                     if not nome:
                         continue
-                    continente_alvo = PAIS_CONTINENTE_MAP.get(nome, "América")  # Fallback default
+                    continente_alvo = PAIS_CONTINENTE_MAP.get(nome, "América")
                     session.run("""
                         MERGE (w:Word {normalized: $norm})
                         SET w.text = $text, w.length = size($norm), w.type = 'pais'
@@ -145,14 +146,28 @@ def populate_geography_graph(
                         )
                     """, text=nome, norm=normalizar_texto(nome), cont_norm=normalizar_texto(continente_alvo))
 
-            # 5. Importar Estados do Brasil e Ligar ao Brasil
-            print("🗺️ Importando Estados do Brasil e relacionando ao Brasil...")
+            # 5. Criar Nós de Regiões do Brasil e ligar ao Brasil
+            print("Criando Nós de Regiões do Brasil...")
+            for reg in REGIOES_BRASIL:
+                session.run("""
+                    MERGE (r:Word {normalized: $norm})
+                    SET r.text = $text, r.length = size($norm), r.type = 'regiao'
+                    WITH r
+                    OPTIONAL MATCH (br:Word {normalized: 'brasil'})
+                    FOREACH (_ IN CASE WHEN br IS NOT NULL THEN [1] ELSE [] END |
+                        MERGE (r)-[:LOCATED_IN]->(br)
+                    )
+                """, text=reg, norm=normalizar_texto(reg))
+
+            # 6. Importar Estados do Brasil e Ligar à sua Região e ao Brasil
+            print("Importando Estados do Brasil e relacionando a Regiões...")
             with open(listas_dir / "estados-br.txt", "r", encoding="utf-8") as f:
                 for line in f:
                     nome = line.strip()
                     if not nome:
                         continue
-                    meta = ESTADOS_METADATA.get(nome, {"uf": "--", "regiao": "Brasil"})
+                    meta = ESTADOS_METADATA.get(nome, {"uf": "--", "regiao": "Sudeste"})
+                    regiao_nome = meta["regiao"]
                     session.run("""
                         MERGE (w:Word {normalized: $norm})
                         SET w.text = $text, w.length = size($norm), w.type = 'estado',
@@ -161,14 +176,14 @@ def populate_geography_graph(
                         MATCH (t:Theme {id: 'estados_br'})
                         MERGE (w)-[:BELONGS_TO {weight: 1.0}]->(t)
                         WITH w
-                        OPTIONAL MATCH (br:Word {normalized: 'brasil'})
-                        FOREACH (_ IN CASE WHEN br IS NOT NULL THEN [1] ELSE [] END |
-                            MERGE (w)-[:LOCATED_IN]->(br)
+                        OPTIONAL MATCH (r:Word {normalized: $reg_norm, type: 'regiao'})
+                        FOREACH (_ IN CASE WHEN r IS NOT NULL THEN [1] ELSE [] END |
+                            MERGE (w)-[:LOCATED_IN]->(r)
                         )
-                    """, text=nome, norm=normalizar_texto(nome), uf=meta["uf"], regiao=meta["regiao"])
+                    """, text=nome, norm=normalizar_texto(nome), uf=meta["uf"], regiao=regiao_nome, reg_norm=normalizar_texto(regiao_nome))
 
-            # 6. Importar Municípios Brasileiros em Lote
-            print("🏙️ Importando Municípios Brasileiros...")
+            # 7. Importar Municípios Brasileiros em Lote
+            print("Importando Municípios Brasileiros...")
             municipios = []
             seen = set()
             with open(listas_dir / "municipios-br.txt", "r", encoding="utf-8") as f:
@@ -199,16 +214,16 @@ def populate_geography_graph(
                     )
                 """, batch=batch)
 
-            # 7. Resumo Final
-            print("\n✅ Grafo Geográfico populado com sucesso!")
+            # 8. Resumo Final
+            print("\nGrafo Geográfico populado com sucesso!")
             res_words = session.run("MATCH (w:Word) RETURN count(w) as total").single()["total"]
             res_themes = session.run("MATCH (t:Theme) RETURN count(t) as total").single()["total"]
             res_located = session.run("MATCH ()-[r:LOCATED_IN]->() RETURN count(r) as total").single()["total"]
             res_belongs = session.run("MATCH ()-[r:BELONGS_TO]->() RETURN count(r) as total").single()["total"]
 
-            print(f"📊 Estatísticas:")
-            print(f"   • Nós de Palavras: {res_words:,}")
-            print(f"   • Nós de Temas:    {res_themes}")
+            print(f"Estatísticas:")
+            print(f"   • Nós de Palavras/Locais: {res_words:,}")
+            print(f"   • Nós de Temas:           {res_themes}")
             print(f"   • Relações [:BELONGS_TO]: {res_belongs:,}")
             print(f"   • Relações [:LOCATED_IN]: {res_located:,}")
 
