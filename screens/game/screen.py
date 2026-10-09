@@ -63,11 +63,10 @@ class GameScreen(BaseGameScreen):
 
             # 2. Painel Principal (60%)
             with Vertical(id="game-main-panel"):
-                # Caixa integrada de Tema + Palavra (entre a View e o Insert)
+                # Caixa integrada de Dica + Palavra (entre a View e o Insert)
                 with Vertical(id="tema-palavra-container"):
-                    yield Label(id="badge-categoria")
-                    yield Static(id="palavra-secreta")
                     yield Label(id="dica-grafo")
+                    yield Static(id="palavra-secreta")
 
                 # Painel de Inserção de Letras, Status e Histórico
                 with Vertical(id="insert-letras-panel"):
@@ -130,15 +129,13 @@ class GameScreen(BaseGameScreen):
         forca_txt = app.engine.obter_arte_forca(self.state.erros)
         self.query_one("#forca-art", Static).update(forca_txt)
 
-        coracoes = "❤️ " * self.state.tentativas_restantes + "🖤 " * self.state.erros
         self.query_one("#vidas-display", Label).update(
-            f"Tentativas: {self.state.tentativas_restantes}/6\n{coracoes}"
+            f"Tentativas Restantes: {self.state.tentativas_restantes}/6"
         )
 
-        # 2. Categoria, Palavra Secreta e Dica do Grafo
-        self.query_one("#badge-categoria", Label).update(f"Tema: {self.state.categoria_nome}")
-        self.query_one("#palavra-secreta", Static).update(self.state.progresso_exibicao)
+        # 2. Dica do Grafo e Palavra Secreta
         self.query_one("#dica-grafo", Label).update(self.state.dica_atual)
+        self.query_one("#palavra-secreta", Static).update(self.state.progresso_exibicao)
 
         # 3. Status
         self.query_one("#status-mensagem", Label).update(self.state.mensagem)

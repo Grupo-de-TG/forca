@@ -91,36 +91,36 @@ class Neo4jHintRepository(IHintRepository):
 
                 # Dica 1: Classificação no Grafo
                 if tipo == "municipio":
-                    hints.append("🏛️ Classificação: Município Brasileiro")
+                    hints.append("Classificação: Município Brasileiro")
                 elif tipo == "estado":
-                    hints.append("🗺️ Classificação: Unidade Federativa / Estado do Brasil")
+                    hints.append("Classificação: Unidade Federativa / Estado do Brasil")
                 elif tipo == "pais":
-                    hints.append("🏳️ Classificação: País do mundo")
+                    hints.append("Classificação: País do mundo")
                 elif tipo == "continente":
-                    hints.append("🌐 Classificação: Continente da Terra")
+                    hints.append("Classificação: Continente da Terra")
                 elif theme_name:
-                    hints.append(f"📚 Categoria no Grafo: {theme_name}")
+                    hints.append(f"Categoria no Grafo: {theme_name}")
 
                 # Dica 2: Relacionamentos diretos / Metadados Geográficos
                 if uf and regiao:
-                    hints.append(f"🧭 Região: {regiao} (Sigla: {uf})")
+                    hints.append(f"Região: {regiao} (Sigla: {uf})")
                 elif ancestrais:
-                    hints.append(f"📍 Localização: Situado em {ancestrais[0]}")
+                    hints.append(f"Localização: Situado em {ancestrais[0]}")
                 elif tipo == "continente" and filhos:
-                    hints.append(f"🌍 Abrange países como: {', '.join(filhos)}")
+                    hints.append(f"Abrange países como: {', '.join(filhos)}")
 
                 # Dica 3: Ancestrais em saltos maiores (N-hops) ou Conexões descendentes
                 if len(ancestrais) > 1:
-                    hints.append(f"🌎 Continente / Bloco: {ancestrais[-1]}")
+                    hints.append(f"Continente / Bloco: {ancestrais[-1]}")
                 elif total_filhos > 3:
-                    hints.append(f"🏙️ Possui {total_filhos} localidades subordinadas no mapa")
+                    hints.append(f"Possui {total_filhos} localidades subordinadas no mapa")
 
                 # Dica 4: Característica morfológica
-                hints.append(f"📏 Estrutura: A palavra possui {length} letras")
+                hints.append(f"Estrutura: A palavra possui {length} letras")
 
                 # Dica 5: Pista de letra inicial
                 if text:
-                    hints.append(f"🔤 Pista: A primeira letra é '{text[0].upper()}'")
+                    hints.append(f"Pista: A primeira letra é '{text[0].upper()}'")
 
         except Exception as e:
             return self._fallback_hints(word_normalized)
@@ -130,8 +130,8 @@ class Neo4jHintRepository(IHintRepository):
     def _fallback_hints(self, word_normalized: str) -> List[str]:
         length = len(word_normalized)
         hints = [
-            f"📏 Estrutura: Palavra com {length} letras.",
+            f"Estrutura: Palavra com {length} letras.",
         ]
         if length > 0:
-            hints.append(f"🔤 Pista: Começa com a letra '{word_normalized[0].upper()}'.")
+            hints.append(f"Pista: Começa com a letra '{word_normalized[0].upper()}'.")
         return hints

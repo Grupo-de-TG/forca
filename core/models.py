@@ -117,10 +117,10 @@ class GameState:
     def dica_atual(self) -> str:
         """Retorna a dica correspondente ao número de letras tentadas."""
         if not self.dicas:
-            return "💡 Dica: Sem pistas adicionais no grafo."
+            return "Dica: Sem pistas adicionais no grafo."
         idx = min(self.total_tentativas_feitas, len(self.dicas) - 1)
         total = len(self.dicas)
-        return f"💡 Dica ({idx + 1}/{total}): {self.dicas[idx]}"
+        return f"Dica ({idx + 1}/{total}): {self.dicas[idx]}"
 
     @property
     def progresso_exibicao(self) -> str:

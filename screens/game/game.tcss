@@ -123,12 +123,16 @@
     align: center middle;
 }
 
-#badge-categoria {
-    color: $warning;
-    text-style: bold;
+#dica-grafo {
     text-align: center;
-    width: 100%;
+    color: $accent;
+    text-style: bold;
+    background: $panel;
+    border: dashed $accent;
+    padding: 0 1;
     margin-bottom: 1;
+    width: 100%;
+    height: auto;
 }
 
 #palavra-secreta {
@@ -139,18 +143,6 @@
     border: double $success;
     padding: 1;
     width: 100%;
-}
-
-#dica-grafo {
-    text-align: center;
-    color: $accent;
-    text-style: bold;
-    background: $panel;
-    border: dashed $accent;
-    padding: 0 1;
-    margin-top: 1;
-    width: 100%;
-    height: auto;
 }
 
 /* ========================================================= */

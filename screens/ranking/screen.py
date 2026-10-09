@@ -37,7 +37,7 @@ class RankingScreen(BaseGameScreen):
     def compose(self) -> ComposeResult:
         with Container(id="ranking-container"):
             with Vertical(id="ranking-box"):
-                yield Label("🏆 RANKING GERAL - TOP JOGADORES", id="ranking-title")
+                yield Label("RANKING GERAL - TOP JOGADORES", id="ranking-title")
                 yield Label("Classificação por pontuação acumulada e desempenho", id="ranking-subtitle")
 
                 yield DataTable(id="ranking-table")
@@ -66,13 +66,7 @@ class RankingScreen(BaseGameScreen):
             return
 
         for idx, p in enumerate(players, start=1):
-            pos_icon = f"#{idx}"
-            if idx == 1:
-                pos_icon = "🥇 1º"
-            elif idx == 2:
-                pos_icon = "🥈 2º"
-            elif idx == 3:
-                pos_icon = "🥉 3º"
+            pos_icon = f"{idx}º"
 
             table.add_row(
                 pos_icon,
