@@ -51,9 +51,13 @@ O **Jogo da Forca - SysOps Edition** é um jogo de terminal interativo com esté
 
 ---
 
-## 🏗️ Arquitetura de Repositórios e Domínio
+## 🏗️ Arquitetura Multi-Banco e Domínio
 
-O motor do jogo ([`ForcaEngine`](file:///home/ryse/Documentos/forca_zipada/core/engine.py)) é **100% agnóstico e desacoplado**, comunicando-se exclusivamente através de interfaces:
+O motor do jogo ([`ForcaEngine`](file:///home/ryse/Documentos/forca_zipada/core/engine.py)) é **100% agnóstico e desacoplado**, utilizando uma **Persistência Poliglota (Multi-Model)** especializada:
+
+* **🐬 MySQL 8.0:** Autenticação de jogadores, credenciais e estatísticas consolidadas de ranking (`users`, `player_stats`).
+* **🍃 MongoDB 6.0:** Dicionário principal de vocabulário (`dicionario`) e auditoria detalhada de sessões em JSON (`logs_partidas`).
+* **🌐 Neo4j 5.26:** Grafo de conhecimento para rotas geográficas e geração de dicas progressivas automáticas.
 
 ```text
 forca_zipada/
@@ -62,13 +66,18 @@ forca_zipada/
 │   ├── models.py                  # Dataclasses de domínio (WordData, Categoria, Player, GameState)
 │   ├── normalizer.py              # Normalizador Unicode NFKD
 │   ├── orientation.py             # Detector de aspect ratio para layouts dinâmicos
-│   ├── database.py                # DatabaseManager (SQLite / Postgres)
-│   ├── ranking_service.py         # RankingService (Implementa IPlayerRepository)
+│   ├── database.py                # DatabaseManager (Pool MySQL + Cliente MongoDB)
+│   ├── dictionary_seed.py         # Seed determinístico com SHA-256 para MongoDB
+│   ├── auth_service.py            # Serviço de Autenticação (MySQL)
+│   ├── ranking_service.py         # RankingService (MySQL + MongoDB, implementa IPlayerRepository)
+│   ├── mongo_word_repository.py   # MongoWordRepository (Implementa IWordRepository via MongoDB)
 │   ├── neo4j_word_repository.py   # Neo4jWordRepository (Implementa IWordRepository)
+│   ├── neo4j_hint_repository.py   # Neo4jHintRepository (Implementa IHintRepository via Cypher)
 │   ├── file_word_repository.py    # FileWordRepository (Implementa IWordRepository fallback)
 │   └── word_repository_factory.py # Fábrica de instanciação por ambiente (WORD_BACKEND)
 ├── interfaces/
 │   ├── word_repository.py         # Interface IWordRepository (Vocabulário e Temas)
+│   ├── hint_repository.py         # Interface IHintRepository (Dicas Contextuais)
 │   ├── player_repository.py       # Interface IPlayerRepository (Usuários e Ranking)
 │   ├── base_screen.py             # BaseGameScreen (Textual Screen com ciclo de vida)
 │   ├── base_modal.py              # BaseGameModal (ModalScreen)
@@ -76,19 +85,21 @@ forca_zipada/
 ├── screens/                       # Telas e Stylesheets isolados (TCSS)
 │   ├── menu/                      # Menu Principal (screen.py, menu.tcss)
 │   ├── player_select/             # Seleção de Jogador (screen.py, player_select.tcss)
-│   ├── game/                      # Partida (screen.py, game.tcss)
+│   ├── game/                      # Partida com widget de dicas (screen.py, game.tcss)
 │   ├── ranking/                   # Leaderboard (screen.py, ranking.tcss)
 │   └── modals/                    # Modais (chute, game_over)
 ├── styles/
 │   └── global.tcss                # Design system global e paleta de cores
 ├── scripts/
-│   └── populate_graph_geography.py # Script de população do grafo no Neo4j
+│   └── populate_graph_geography.py # Ingestão e estruturação do Grafo no Neo4j
+├── seed_dicionario.py             # Script de carga de palavras no MongoDB
+├── init.sql                       # Esquema DDL inicial do MySQL
 ├── listas/                        # Dicionários de palavras por categoria
 ├── Dockerfile                     # Imagem Docker multi-backend otimizada
-├── docker-compose.yml             # Orquestrador multi-container
-├── setup.sh                       # Script de provisionamento configurável
+├── docker-compose.yml             # Orquestrador multi-container (MySQL, Mongo, Neo4j, App)
+├── setup.sh                       # Provisionamento automático e carga de bancos
 ├── run.sh                         # Launcher de execução interativa (Docker ou Local)
-└── forca_app.py                   # Ponto de entrada Textual
+└── forca_app.py                   # Ponto de entrada Textual (Orquestrador)
 ```
 
 ---

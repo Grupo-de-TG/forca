@@ -1,4 +1,5 @@
 textual>=0.80.0
-neo4j>=5.26.0
+mysql-connector-python>=8.0.33
 pymongo>=4.6.0
+neo4j>=5.26.0
 psycopg2-binary>=2.9.9

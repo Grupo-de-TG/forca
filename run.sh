@@ -19,19 +19,21 @@ fi
 # Verifica se o setup foi executado previamente
 if [ ! -f ".env" ]; then
     echo "⚠️ Arquivo de configuração .env não encontrado."
-    echo "Executando setup padrão com Neo4j..."
-    ./setup.sh --grafo
+    echo "Executando setup completo dos bancos..."
+    ./setup.sh
 fi
 
 # Carrega variáveis
 export $(cat .env | xargs)
 
-# Garante que o container do Neo4j (Knowledge Graph de Dicas) está rodando
-if ! docker compose ps forca-neo4j | grep -q "Up"; then
-    echo "🌐 Iniciando container do Neo4j (Grafo de Dicas)..."
-    docker compose up -d forca-neo4j
-    sleep 2
-fi
+# Garante que os containers dos bancos de dados estão rodando
+for db_container in forca-mysql forca-mongodb forca-neo4j; do
+    if ! docker compose ps "$db_container" | grep -q "Up"; then
+        echo "🌐 Iniciando container $db_container..."
+        docker compose up -d "$db_container"
+        sleep 2
+    fi
+done
 
 # Inicia o jogo conectado ao TTY do terminal
 docker compose run --rm forca-app

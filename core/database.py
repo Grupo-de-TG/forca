@@ -1,96 +1,208 @@
 """
-Gerenciador de Banco de Dados SQL (SQLite) para o Jogo da Forca.
+Gerenciador de Banco de Dados Múltiplos (MySQL + MongoDB)
+para o Jogo da Forca.
+
+MySQL:
+    - users
+    - player_stats
+
+MongoDB:
+    - dicionario
+    - logs_partidas
+
+O esquema do MySQL é criado pelo init.sql durante a inicialização do
+container. Este módulo fica responsável apenas pelas conexões.
 """
 
 from __future__ import annotations
-import sqlite3
-from pathlib import Path
-from typing import Optional
+
+import os
 from contextlib import contextmanager
+from typing import Any, Iterator, Optional
+
+import mysql.connector
+from mysql.connector import Error
+from mysql.connector import pooling
+from pymongo import MongoClient
+from pymongo.collection import Collection
+from pymongo.database import Database as MongoDatabase
+
+
+class MySQLTransaction:
+    """Adapta uma conexão MySQL para a interface execute() usada pelos serviços."""
+
+    def __init__(self, connection: Any):
+        self.connection = connection
+
+    def execute(
+        self,
+        query: str,
+        params: Optional[tuple[Any, ...]] = None,
+    ):
+        """Executa uma consulta usando cursor com resultados em dicionário."""
+        cursor = self.connection.cursor(
+            dictionary=True,
+            buffered=True,
+        )
+        cursor.execute(query, params or ())
+        return cursor
 
 
 class DatabaseManager:
-    """Gerencia conexões e esquema do banco de dados SQLite."""
+    """Gerencia conexões do MySQL e do MongoDB."""
 
-    def __init__(self, db_path: Optional[Path] = None):
-        if db_path is None:
-            self.db_path = Path(__file__).parent.parent / "data" / "forca.db"
-        else:
-            self.db_path = db_path
+    def __init__(self, db_path: Optional[Any] = None):
+        """
+        Inicializa os clientes dos bancos.
 
-        self._ensure_storage()
-        self.init_schema()
+        O argumento db_path é mantido por compatibilidade com o código atual
+        da aplicação, mas deixa de ser utilizado porque o armazenamento passa
+        a ser feito pelo MySQL.
+        """
+        # Mantido somente para compatibilidade com ForcaApp.
+        del db_path
 
-    def _ensure_storage(self) -> None:
-        if not self.db_path.parent.exists():
-            self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        # ============================================================
+        # MYSQL
+        # ============================================================
 
-    def get_connection(self) -> sqlite3.Connection:
-        """Retorna conexão SQLite configurada com foreign keys e Row factory."""
-        conn = sqlite3.connect(str(self.db_path))
-        conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA foreign_keys = ON;")
-        conn.execute("PRAGMA journal_mode = WAL;")
-        return conn
+        self.mysql_host = os.getenv(
+            "MYSQL_HOST",
+            "localhost",
+        )
+
+        self.mysql_port = int(
+            os.getenv(
+                "MYSQL_PORT",
+                "3306",
+            )
+        )
+
+        self.mysql_user = os.getenv(
+            "MYSQL_USER",
+            "forca_user",
+        )
+
+        self.mysql_password = os.getenv(
+            "MYSQL_PASSWORD",
+            "forca_password",
+        )
+
+        self.mysql_database = os.getenv(
+            "MYSQL_DATABASE",
+            "forca_db",
+        )
+
+        self._init_mysql_pool()
+
+        # ============================================================
+        # MONGODB
+        # ============================================================
+
+        self.mongo_uri = os.getenv(
+            "MONGO_URI",
+            "mongodb://localhost:27017/",
+        )
+
+        self.mongo_database = os.getenv(
+            "MONGO_DATABASE",
+            "forca_db",
+        )
+
+        self._init_mongo()
+
+    def _init_mysql_pool(self) -> None:
+        """Cria o pool de conexões do MySQL."""
+
+        try:
+            self.mysql_pool = pooling.MySQLConnectionPool(
+                pool_name="forca_pool",
+                pool_size=5,
+                pool_reset_session=True,
+                host=self.mysql_host,
+                port=self.mysql_port,
+                user=self.mysql_user,
+                password=self.mysql_password,
+                database=self.mysql_database,
+                autocommit=False,
+            )
+
+        except Error as exc:
+            raise RuntimeError(
+                "Não foi possível conectar ao MySQL. "
+                f"Host={self.mysql_host}:{self.mysql_port}, "
+                f"database={self.mysql_database}. "
+                f"Erro: {exc}"
+            ) from exc
+
+    def _init_mongo(self) -> None:
+        """Inicializa o cliente e as coleções do MongoDB."""
+
+        try:
+            self.mongo_client = MongoClient(
+                self.mongo_uri,
+                serverSelectionTimeoutMS=5000,
+            )
+
+            # Testa a conexão imediatamente.
+            self.mongo_client.admin.command("ping")
+
+        except Exception as exc:
+            raise RuntimeError(
+                "Não foi possível conectar ao MongoDB "
+                f"em {self.mongo_uri}. "
+                f"Erro: {exc}"
+            ) from exc
+
+        self.mongo_db: MongoDatabase = self.mongo_client[
+            self.mongo_database
+        ]
+
+        # Coleção do dicionário de palavras.
+        self.dicionario_collection: Collection = (
+            self.mongo_db["dicionario"]
+        )
+
+        # Coleção dos logs/histórico detalhado das partidas.
+        self.logs_partidas_collection: Collection = (
+            self.mongo_db["logs_partidas"]
+        )
+
+        # Aliases para facilitar a utilização futura.
+        self.words_collection = self.dicionario_collection
+        self.sessions_collection = self.logs_partidas_collection
 
     @contextmanager
-    def transaction(self):
-        """Context manager para operações atômicas com commit/rollback automático."""
-        conn = self.get_connection()
+    def transaction(self) -> Iterator[MySQLTransaction]:
+        """
+        Abre uma transação MySQL com commit/rollback automático.
+
+        O objeto entregue ao bloco possui execute(), mantendo
+        temporariamente a forma de uso dos serviços atuais.
+        """
+
+        conn = None
+
         try:
-            yield conn
+            conn = self.mysql_pool.get_connection()
+
+            transaction = MySQLTransaction(conn)
+
+            yield transaction
+
             conn.commit()
+
         except Exception:
-            conn.rollback()
+            if conn is not None:
+                conn.rollback()
+
             raise
+
         finally:
-            conn.close()
+            if conn is not None:
+                conn.close()
 
-    def init_schema(self) -> None:
-        """Cria as tabelas e índices se não existirem."""
-        with self.transaction() as conn:
-            # 1. Tabela de Usuários e Autenticação Simples
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS users (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    username TEXT UNIQUE NOT NULL COLLATE NOCASE,
-                    password TEXT NOT NULL,
-                    marca_paco TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                );
-            """)
+    def close(self) -> None:
+        """Fecha o cliente do MongoDB."""
 
-
-            # 2. Tabela de Estatísticas e Ranking dos Jogadores
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS player_stats (
-                    user_id INTEGER PRIMARY KEY,
-                    score INTEGER NOT NULL DEFAULT 0,
-                    partidas INTEGER NOT NULL DEFAULT 0,
-                    vitorias INTEGER NOT NULL DEFAULT 0,
-                    streak_atual INTEGER NOT NULL DEFAULT 0,
-                    best_streak INTEGER NOT NULL DEFAULT 0,
-                    marca_paco TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-                );
-            """)
-
-            # 3. Tabela de Histórico de Partidas
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS partidas (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER NOT NULL,
-                    vencidas INTEGER NOT NULL,
-                    categoria TEXT NOT NULL,
-                    palavra TEXT NOT NULL,
-                    tentativas_restantes INTEGER NOT NULL,
-                    pontos INTEGER NOT NULL,
-                    marca_paco TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-                );
-            """)
-
-            # Índices para performance em buscas e ordenação
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_stats_score ON player_stats(score DESC, vitorias DESC);")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_partidas_user ON partidas(user_id, marca_paco DESC);")
-
+        self.mongo_client.close()

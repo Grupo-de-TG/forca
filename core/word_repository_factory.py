@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Optional
 
 from interfaces.word_repository import IWordRepository
+from core.mongo_word_repository import MongoWordRepository
 from core.neo4j_word_repository import Neo4jWordRepository
 from core.file_word_repository import FileWordRepository
 
@@ -24,9 +25,15 @@ class WordRepositoryFactory:
         if project_root is None:
             project_root = Path(__file__).parent.parent
 
-        tipo = (backend_type or os.getenv("WORD_BACKEND", "graph")).strip().lower()
+        tipo = (backend_type or os.getenv("WORD_BACKEND", "mongo")).strip().lower()
 
-        if tipo in ("graph", "grapho", "grafo", "neo4j"):
+        if tipo in ("mongo", "mongodb", "doc", "document", "documento"):
+            mongo_repo = MongoWordRepository()
+            if mongo_repo.is_available():
+                return mongo_repo
+            return FileWordRepository(project_root=project_root)
+
+        elif tipo in ("graph", "grapho", "grafo", "neo4j"):
             uri = os.getenv("NEO4J_URI", "bolt://localhost:7687")
             user = os.getenv("NEO4J_USER", "neo4j")
             password = os.getenv("NEO4J_PASS", "forcasecret")
