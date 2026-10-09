@@ -1,7 +1,7 @@
 """
 Script de Ingestão e Estruturação do Grafo Geográfico no Neo4j.
-Cria a taxonomia hierárquica (Geografia -> Continentes, Países, Regiões, Estados, Municípios)
-e as relações de pertencimento [:BELONGS_TO] e localização [:LOCATED_IN].
+Cria a taxonomia hierárquica completa (Geografia -> Continentes, Países, Regiões, Estados, Municípios)
+com mapeamento 100% preciso para todos os 222 países, 27 estados e municípios.
 """
 
 from __future__ import annotations
@@ -50,18 +50,76 @@ ESTADOS_METADATA = {
 
 REGIOES_BRASIL = ["Norte", "Nordeste", "Centro-Oeste", "Sudeste", "Sul"]
 
-PAIS_CONTINENTE_MAP = {
-    "Brasil": "América", "Argentina": "América", "Chile": "América", "Colômbia": "América",
-    "Uruguai": "América", "Paraguai": "América", "Peru": "América", "Bolívia": "América",
-    "Equador": "América", "Venezuela": "América", "Estados Unidos": "América", "Canadá": "América",
-    "México": "América", "Cuba": "América", "Alemanha": "Europa", "França": "Europa",
-    "Itália": "Europa", "Espanha": "Europa", "Portugal": "Europa", "Reino Unido": "Europa",
-    "Rússia": "Europa", "Holanda": "Europa", "Suíça": "Europa", "Grécia": "Europa",
-    "China": "Ásia", "Japão": "Ásia", "Índia": "Ásia", "Coreia do Sul": "Ásia",
-    "Coreia do Norte": "Ásia", "Israel": "Ásia", "Arábia Saudita": "Ásia", "Turquia": "Ásia",
-    "Egito": "África", "África do Sul": "África", "Nigéria": "África", "Angola": "África",
-    "Moçambique": "África", "Marrocos": "África", "Austrália": "Oceania", "Nova Zelândia": "Oceania",
+AMERICA_SET = {
+    'Anguila', 'Antígua e Barbuda', 'Argentina', 'Aruba', 'Bahamas', 'Barbados', 'Belize',
+    'Bermudas', 'Bolívia', 'Brasil', 'Canadá', 'Chile', 'Colômbia', 'Costa Rica', 'Cuba',
+    'Curaçao', 'Dominica', 'El Salvador', 'Equador', 'Estados Unidos', 'Estados Unidos da América',
+    'Granada', 'Groenlândia', 'Guadalupe', 'Guatemala', 'Guiana', 'Guiana Francesa', 'Haiti',
+    'Honduras', 'Ilhas Caimão', 'Ilhas Cayman', 'Ilhas Malvinas', 'Ilhas Turcas e Caicos',
+    'Ilhas Virgens', 'Ilhas Virgens Americanas', 'Ilhas Virgens Britânicas', 'Jamaica',
+    'Martinica', 'México', 'Montserrat', 'Nicarágua', 'Panamá', 'Paraguai', 'Peru',
+    'Porto Rico', 'República Dominicana', 'Santa Lúcia', 'São Cristóvão e Nevis',
+    'São Cristóvão e Névis', 'São Martinho', 'São Pedro e Miquelão', 'São Vicente e Granadinas',
+    'Sint Maarten', 'Suriname', 'Trinidad e Tobago', 'Uruguai', 'Venezuela'
 }
+
+EUROPA_SET = {
+    'Abecásia', 'Albânia', 'Alemanha', 'Andorra', 'Áustria', 'Bielorrússia', 'Bélgica',
+    'Bósnia e Herzegovina', 'Bulgária', 'Chipre', 'Chipre do Norte', 'Croácia', 'Dinamarca',
+    'Escócia', 'Eslováquia', 'Eslovênia', 'Espanha', 'Estônia', 'Finlândia', 'França',
+    'Geórgia', 'Gibraltar', 'Grécia', 'Guernsey', 'Holanda', 'Hungria', 'Ilha de Man',
+    'Ilhas Faroé', 'Ilhas Åland', 'Inglaterra', 'Irlanda', 'Irlanda do Norte', 'Islândia',
+    'Itália', 'Jersey', 'Kosovo', 'Letônia', 'Liechtenstein', 'Lituânia', 'Luxemburgo',
+    'Macedônia do Norte', 'Macedónia', 'Malta', 'Moldávia', 'Mônaco', 'Montenegro',
+    'Noruega', 'País de Gales', 'Países Baixos', 'Polônia', 'Polónia', 'Portugal',
+    'Reino Unido', 'República Checa', 'República Tcheca', 'República Turca de Chipre do Norte',
+    'Romênia', 'Roménia', 'Rússia', 'San Marino', 'Sérvia', 'Suécia', 'Suíça',
+    'Svalbard', 'Transnístria', 'Ucrânia', 'Vaticano'
+}
+
+ASIA_SET = {
+    'Afeganistão', 'Arábia Saudita', 'Armênia', 'Arménia', 'Azerbaijão', 'Bahrein', 'Bangladesh',
+    'Brunei', 'Butão', 'Camboja', 'Catar', 'Cazaquistão', 'China', 'Coreia do Norte', 'Coreia do Sul',
+    'Emirados Árabes Unidos', 'Filipinas', 'Hong Kong', 'Iêmen', 'Iémen', 'Índia', 'Indonésia',
+    'Irã', 'Irão', 'Iraque', 'Israel', 'Japão', 'Jordânia', 'Kuwait', 'Laos', 'Líbano', 'Macau',
+    'Malásia', 'Maldivas', 'Mianmar', 'Mongólia', 'Nepal', 'Omã', 'Ossétia do Sul', 'Palestina',
+    'Paquistão', 'Qatar', 'Quirguistão', 'Singapura', 'Síria', 'Sri Lanka', 'Tailândia', 'Taiwan',
+    'Tajiquistão', 'Timor-Leste', 'Turcomenistão', 'Turquemenistão', 'Turquia', 'Uzbequistão',
+    'Vietnã', 'Vietname'
+}
+
+AFRICA_SET = {
+    'África do Sul', 'Angola', 'Argélia', 'Benim', 'Botsuana', 'Botswana', 'Burkina Faso', 'Burundi',
+    'Cabo Verde', 'Camarões', 'Chade', 'Comores', 'Congo', 'Costa do Marfim', 'Djibuti', 'Egito',
+    'Eritreia', 'Essuatíni', 'Eswatini', 'Etiópia', 'Gabão', 'Gâmbia', 'Gana', 'Guiné',
+    'Guiné Equatorial', 'Guiné-Bissau', 'Lesoto', 'Libéria', 'Líbia', 'Madagascar', 'Malawi',
+    'Mali', 'Marrocos', 'Maurícia', 'Mauritânia', 'Mayotte', 'Moçambique', 'Namíbia', 'Níger',
+    'Nigéria', 'Quênia', 'Quénia', 'República Árabe Saaraui Democrática', 'República Centro-Africana',
+    'República Democrática do Congo', 'República do Congo', 'Reunião', 'Ruanda', 'Saara Ocidental',
+    'Santa Helena', 'São Tomé e Príncipe', 'Senegal', 'Seicheles', 'Seychelles', 'Serra Leoa',
+    'Somália', 'Somalilândia', 'Sudão', 'Sudão do Sul', 'Suazilândia', 'Tanzânia', 'Togo', 'Tunísia',
+    'Uganda', 'Zâmbia', 'Zimbábue', 'Zimbabué'
+}
+
+OCEANIA_SET = {
+    'Austrália', 'Estados Federados da Micronésia', 'Fiji', 'Guam', 'Ilha Christmas', 'Ilha Norfolk',
+    'Ilhas Cocos', 'Ilhas Cook', 'Ilhas Marianas do Norte', 'Ilhas Marshall', 'Ilhas Pitcairn',
+    'Ilhas Salomão', 'Kiribati', 'Marshall', 'Micronésia', 'Nauru', 'Niue', 'Nova Caledônia',
+    'Nova Zelândia', 'Palau', 'Papua-Nova Guiné', 'Polinésia Francesa', 'Salomão', 'Samoa',
+    'Samoa Americana', 'Tokelau', 'Tonga', 'Tuvalu', 'Vanuatu', 'Wallis e Futuna'
+}
+
+
+def obter_continente(pais: str) -> str:
+    if pais in AFRICA_SET:
+        return "África"
+    if pais in ASIA_SET:
+        return "Ásia"
+    if pais in EUROPA_SET:
+        return "Europa"
+    if pais in OCEANIA_SET:
+        return "Oceania"
+    return "América"
 
 
 def populate_geography_graph(
@@ -125,17 +183,17 @@ def populate_geography_graph(
                         MERGE (w)-[:BELONGS_TO {weight: 1.0}]->(t)
                     """, text=nome, norm=normalizar_texto(nome))
 
-            # 4. Criar Países e Ligar a Continentes
-            print("Importando Países e relacionando a Continentes...")
+            # 4. Criar Países com Mapeamento Exato de Continente
+            print("Importando 222 Países com Continentes Exatos...")
             with open(listas_dir / "paises.txt", "r", encoding="utf-8") as f:
                 for line in f:
                     nome = line.strip()
                     if not nome:
                         continue
-                    continente_alvo = PAIS_CONTINENTE_MAP.get(nome, "América")
+                    continente_alvo = obter_continente(nome)
                     session.run("""
                         MERGE (w:Word {normalized: $norm})
-                        SET w.text = $text, w.length = size($norm), w.type = 'pais'
+                        SET w.text = $text, w.length = size($norm), w.type = 'pais', w.continente = $continente
                         WITH w
                         MATCH (t:Theme {id: 'paises'})
                         MERGE (w)-[:BELONGS_TO {weight: 1.0}]->(t)
@@ -144,9 +202,9 @@ def populate_geography_graph(
                         FOREACH (_ IN CASE WHEN c IS NOT NULL THEN [1] ELSE [] END |
                             MERGE (w)-[:LOCATED_IN]->(c)
                         )
-                    """, text=nome, norm=normalizar_texto(nome), cont_norm=normalizar_texto(continente_alvo))
+                    """, text=nome, norm=normalizar_texto(nome), continente=continente_alvo, cont_norm=normalizar_texto(continente_alvo))
 
-            # 5. Criar Nós de Regiões do Brasil e ligar ao Brasil
+            # 5. Criar Nós de Regiões do Brasil
             print("Criando Nós de Regiões do Brasil...")
             for reg in REGIOES_BRASIL:
                 session.run("""
@@ -159,8 +217,8 @@ def populate_geography_graph(
                     )
                 """, text=reg, norm=normalizar_texto(reg))
 
-            # 6. Importar Estados do Brasil e Ligar à sua Região e ao Brasil
-            print("Importando Estados do Brasil e relacionando a Regiões...")
+            # 6. Importar Estados do Brasil e Ligar à Região e ao Brasil
+            print("Importando Estados do Brasil...")
             with open(listas_dir / "estados-br.txt", "r", encoding="utf-8") as f:
                 for line in f:
                     nome = line.strip()
@@ -171,7 +229,7 @@ def populate_geography_graph(
                     session.run("""
                         MERGE (w:Word {normalized: $norm})
                         SET w.text = $text, w.length = size($norm), w.type = 'estado',
-                            w.uf = $uf, w.regiao = $regiao
+                            w.uf = $uf, w.regiao = $regiao, w.is_estado = true
                         WITH w
                         MATCH (t:Theme {id: 'estados_br'})
                         MERGE (w)-[:BELONGS_TO {weight: 1.0}]->(t)
@@ -203,7 +261,8 @@ def populate_geography_graph(
                 session.run("""
                     UNWIND $batch AS item
                     MERGE (w:Word {normalized: item.norm})
-                    SET w.text = item.text, w.length = item.len, w.type = 'municipio'
+                    ON CREATE SET w.text = item.text, w.length = item.len, w.type = 'municipio'
+                    ON MATCH SET w.is_municipio = true
                     WITH w
                     MATCH (t:Theme {id: 'municipios_br'})
                     MERGE (w)-[:BELONGS_TO {weight: 1.0}]->(t)

@@ -48,13 +48,13 @@ class Neo4jHintRepository(IHintRepository):
             self._driver.close()
             self._driver = None
 
-    def get_hints(self, word_normalized: str) -> List[str]:
+    def get_hints(self, word_normalized: str, theme_name: Optional[str] = None) -> List[str]:
         """
         Gera uma lista progressiva de dicas em linguagem natural,
         navegando pelos nós e relacionamentos do grafo geográfico.
         """
         if not self.is_available():
-            return self._fallback_hints(word_normalized)
+            return self._fallback_hints(word_normalized, theme_name)
 
         hints: List[str] = []
         try:
@@ -68,6 +68,9 @@ class Neo4jHintRepository(IHintRepository):
                        w.type AS tipo,
                        w.uf AS uf,
                        w.regiao AS regiao,
+                       w.continente AS continente,
+                       w.is_estado AS is_estado,
+                       w.is_municipio AS is_municipio,
                        w.length AS length,
                        t.name AS theme_name,
                        [a IN collect(DISTINCT ancestor.text) WHERE a IS NOT NULL] AS ancestrais,
@@ -78,28 +81,32 @@ class Neo4jHintRepository(IHintRepository):
                 result = session.run(query, norm=word_normalized).single()
 
                 if not result or result["text"] is None:
-                    return self._fallback_hints(word_normalized)
+                    return self._fallback_hints(word_normalized, theme_name)
 
                 text = result["text"]
                 tipo = result["tipo"]
                 uf = result["uf"]
                 regiao = result["regiao"]
+                continente = result["continente"]
+                is_estado = bool(result["is_estado"])
                 length = result["length"] or len(word_normalized)
-                theme_name = result["theme_name"]
                 ancestrais = result["ancestrais"] or []
                 filhos = result["filhos_amostra"] or []
+                theme_clean = (theme_name or "").lower()
 
-                # 1. Município
-                if tipo == "municipio":
+                # 1. TEMA MUNICÍPIOS (ou tipo município)
+                if ("municip" in theme_clean) or (tipo == "municipio" and "estado" not in theme_clean and not is_estado):
                     hints.append("É uma cidade do Brasil")
+                    if uf and uf != "--":
+                        hints.append(f"Fica no estado com a sigla {uf}")
                     if regiao:
                         hints.append(f"Fica localizada na região {regiao}")
                     hints.append("Fica no continente América")
                     hints.append(f"A palavra possui {length} letras")
                     hints.append(f"Começa com a letra '{text[0].upper()}'")
 
-                # 2. Estado
-                elif tipo == "estado":
+                # 2. TEMA ESTADOS (ou nó de estado)
+                elif ("estado" in theme_clean) or is_estado or tipo == "estado":
                     uf_str = f" com a sigla {uf}" if uf and uf != "--" else ""
                     hints.append(f"É um estado do Brasil{uf_str}")
                     if regiao:
@@ -108,48 +115,49 @@ class Neo4jHintRepository(IHintRepository):
                     hints.append(f"A palavra possui {length} letras")
                     hints.append(f"Começa com a letra '{text[0].upper()}'")
 
-                # 3. País
-                elif tipo == "pais":
+                # 3. TEMA PAÍSES
+                elif ("pais" in theme_clean) or tipo == "pais":
                     hints.append("É um país do mundo")
-                    if ancestrais:
-                        hints.append(f"Fica situado no continente {ancestrais[0]}")
+                    cont_alvo = continente or (ancestrais[0] if ancestrais else "América")
+                    hints.append(f"Fica situado no continente {cont_alvo}")
                     hints.append(f"A palavra possui {length} letras")
                     hints.append(f"Começa com a letra '{text[0].upper()}'")
 
-                # 4. Continente
-                elif tipo == "continente":
+                # 4. TEMA CONTINENTES
+                elif ("continente" in theme_clean) or tipo == "continente":
                     hints.append("É um continente do planeta Terra")
                     if filhos:
                         hints.append(f"Abrange países como {', '.join(filhos)}")
                     hints.append(f"A palavra possui {length} letras")
                     hints.append(f"Começa com a letra '{text[0].upper()}'")
 
-                # 5. Região
+                # 5. REGIÃO
                 elif tipo == "regiao":
                     hints.append("É uma das 5 grandes regiões geográficas do Brasil")
                     hints.append("Agrupa vários estados no território nacional")
                     hints.append(f"A palavra possui {length} letras")
                     hints.append(f"Começa com a letra '{text[0].upper()}'")
 
-                # 6. Tema Geral / Verbos
+                # 6. CONJUGAÇÃO VERBAL / GERAL
                 else:
-                    if theme_name == "Conjugações":
-                        hints.append("É uma conjugação verbal da língua portuguesa")
-                    elif theme_name:
-                        hints.append(f"Pertence ao grupo de {theme_name}")
-                    hints.append(f"A palavra possui {length} letras")
-                    hints.append(f"Começa com a letra '{text[0].upper()}'")
+                    return self._fallback_hints(word_normalized, theme_name)
 
         except Exception:
-            return self._fallback_hints(word_normalized)
+            return self._fallback_hints(word_normalized, theme_name)
 
-        return hints if hints else self._fallback_hints(word_normalized)
+        return hints if hints else self._fallback_hints(word_normalized, theme_name)
 
-    def _fallback_hints(self, word_normalized: str) -> List[str]:
+    def _fallback_hints(self, word_normalized: str, theme_name: Optional[str] = None) -> List[str]:
         length = len(word_normalized)
-        hints = [
-            f"A palavra possui {length} letras.",
-        ]
+        hints: List[str] = []
+        theme_clean = (theme_name or "").lower()
+
+        if "conjug" in theme_clean:
+            hints.append("É uma conjugação verbal da língua portuguesa")
+        elif theme_name:
+            hints.append(f"Pertence ao grupo de {theme_name}")
+
+        hints.append(f"A palavra possui {length} letras.")
         if length > 0:
             hints.append(f"Começa com a letra '{word_normalized[0].upper()}'.")
         return hints

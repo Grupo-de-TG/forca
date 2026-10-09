@@ -125,12 +125,9 @@ class ForcaEngine:
         dicas = []
         if self.hint_repo:
             try:
-                dicas = self.hint_repo.get_hints(norm)
+                dicas = self.hint_repo.get_hints(norm, theme_name=cat_nome)
             except Exception:
                 dicas = []
-
-        if cat_nome == "Conjugações" and not any("conjugação" in d.lower() for d in dicas):
-            dicas.insert(0, "É uma conjugação verbal da língua portuguesa")
 
         return GameState(
             categoria_nome=cat_nome,
