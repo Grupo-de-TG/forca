@@ -119,18 +119,19 @@ def seed_dictionary(
 
     state_collection = collection.database[SEED_STATE_COLLECTION]
 
-    # O ZIP anterior podia conter o nome da lista de conjugações serializado
-    # literalmente como #U00e7/#U00f5. Remove apenas documentos antigos do seed
-    # com esse nome inválido, sem tocar em palavras cadastradas manualmente.
-    legacy_categories = {
-        Path("conjuga#U00e7#U00f5es.txt").stem.title(),
-    }
+    # Remove documentos de categorias que foram removidas da pasta listas/
     current_categories = {nome_categoria(arquivo) for arquivo in arquivos}
-    for legacy_category in legacy_categories - current_categories:
+    seeded_categories = state_collection.distinct("_id")
+    for old_category in set(seeded_categories) - current_categories:
         collection.delete_many(
-            {"categoria": legacy_category, "origem_seed": SEED_ORIGIN}
+            {"categoria": old_category, "origem_seed": SEED_ORIGIN}
         )
-        state_collection.delete_one({"_id": legacy_category})
+        state_collection.delete_one({"_id": old_category})
+
+    # Purga explícita de conjugações caso ainda existam no MongoDB
+    collection.delete_many(
+        {"categoria": {"$regex": "^conjug", "$options": "i"}, "origem_seed": SEED_ORIGIN}
+    )
 
     # Índice único por categoria + palavra normalizada. Se já existir com as
     # mesmas chaves/opções, MongoDB mantém o índice existente.

@@ -33,7 +33,7 @@ class CategoryScreen(BaseGameScreen):
 
     def compose(self) -> ComposeResult:
         with Container(id="category-container"):
-            yield Label("📂 ESCOLHA UMA CATEGORIA", id="menu-title")
+            yield Label("ESCOLHA UMA CATEGORIA", id="menu-title")
             yield Static("Use as setas [b]↑ e ↓[/b] para navegar pelas listas e [b]Enter[/b] para confirmar:", id="menu-subtitle")
             yield OptionList(id="category-list")
             with Horizontal(classes="modal-buttons"):
@@ -47,11 +47,11 @@ class CategoryScreen(BaseGameScreen):
         option_list.clear_options()
         
         # Opção 0: Aleatório
-        option_list.add_option(Option("🎲 Modo Aleatório (Mistura todas as listas)", id="cat_all"))
+        option_list.add_option(Option("Modo Aleatório (Mistura todas as listas)", id="cat_all"))
         
         # Opções das listas carregadas
         for i, cat in enumerate(app.engine.categorias):
-            label = f"📁 {cat.nome} ({cat.total_palavras} palavras)"
+            label = f"{cat.nome} ({cat.total_palavras} palavras)"
             option_list.add_option(Option(label, id=f"cat_{i}"))
 
         option_list.highlighted = 0

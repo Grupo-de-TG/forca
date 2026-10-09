@@ -138,7 +138,7 @@ class Neo4jHintRepository(IHintRepository):
                     hints.append(f"A palavra possui {length} letras")
                     hints.append(f"Começa com a letra '{text[0].upper()}'")
 
-                # 6. CONJUGAÇÃO VERBAL / GERAL
+                # 6. GERAL / FALLBACK
                 else:
                     return self._fallback_hints(word_normalized, theme_name)
 
@@ -150,11 +150,7 @@ class Neo4jHintRepository(IHintRepository):
     def _fallback_hints(self, word_normalized: str, theme_name: Optional[str] = None) -> List[str]:
         length = len(word_normalized)
         hints: List[str] = []
-        theme_clean = (theme_name or "").lower()
-
-        if "conjug" in theme_clean:
-            hints.append("É uma conjugação verbal da língua portuguesa")
-        elif theme_name:
+        if theme_name:
             hints.append(f"Pertence ao grupo de {theme_name}")
 
         hints.append(f"A palavra possui {length} letras.")
